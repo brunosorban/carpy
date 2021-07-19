@@ -17,37 +17,15 @@ class Race:
         self.Driver = Driver
         self.maxTime = maxTime
         self.initialSolution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] if initialSolution is None else initialSolution
-        self.solution = [[self.initialSolution[i]] for i in range(len(self.initialSolution))]
         self.atol = atol
         self.rtol = rtol
         self.maxStep = maxStep
-
-        self.T1 = [0]
-        self.T2 = [0]
-        self.T3 = [0]
-        self.T4 = [0]
-        self.delta_1 = [0]
-        self.delta_2 = [0]
-        self.delta_3 = [0]
-        self.delta_4 = [0]
-        self.ax = [0]
-        self.ay = [0]
-        self.avx = [0]
-        self.avy = [0]
-        self.omega1= [0]
-        self.omega2= [0]
-        self.omega3 = [0]
-        self.omega4 = [0]
-        self.omegaDot1 = [0]
-        self.omegaDot2 = [0]
-        self.omegaDot3 = [0]
-        self.omegaDot4 = [0]
-
+        self.solver()
     
-    def uDot(self, t, sol):
+    def uDot(self, t, sol, post_process=False):
         '''Calculate the state space derivatives'''
         # Retrieve integration data
-        x, y, vx, vy, psi, psiDot, omega1, omega2, omega3, omega4 = sol
+        x, y, vx, vy, psi, psi_dot, omega1, omega2, omega3, omega4 = sol
 
         # Get velocities in vehicle coordinate system
         vvx = vx * np.cos(psi) + vy * np.sin(psi)
@@ -55,24 +33,21 @@ class Race:
         v = np.sqrt(vx**2 + vy**2)
 
         # Get control variables
-        # T1 = self.Driver.T1_control(v)
-        # T2 = self.Driver.T2_control(v)
-        # T3 = self.Driver.T3_control(v)
-        # T4 = self.Driver.T4_control(v)
-        T1 = T2 = (60-v) * 200
-        T3 = T4 = 0
+        T1 = self.Driver.T1_control(v)
+        T2 = self.Driver.T2_control(v)
+        T3 = self.Driver.T3_control(v)
+        T4 = self.Driver.T4_control(v)
 
-        # delta_1 = self.Driver.delta_1_control(t)
-        # delta_2 = self.Driver.delta_2_control(t)
-        # delta_3 = self.Driver.delta_3_control(t)
-        # delta_4 = self.Driver.delta_4_control(t)
-        delta_1 = delta_2 = delta_3 = delta_4 = 0
+        delta_1 = self.Driver.delta_1_control(t)
+        delta_2 = self.Driver.delta_2_control(t)
+        delta_3 = self.Driver.delta_3_control(t)
+        delta_4 = self.Driver.delta_4_control(t)
 
         # Calculate tire forces
-        ftx_1, fty_1, Mz_1 = self.Vehicle.Tire(vvx - psiDot * self.Vehicle.wf/2, vvy + psiDot * self.Vehicle.lf, delta_1, omega1, self.Vehicle.Fz / self.Vehicle.n_tires)
-        ftx_2, fty_2, Mz_2 = self.Vehicle.Tire(vvx + psiDot * self.Vehicle.wf/2, vvy - psiDot * self.Vehicle.lf, delta_2, omega2, self.Vehicle.Fz / self.Vehicle.n_tires)
-        ftx_3, fty_3, Mz_3 = self.Vehicle.Tire(vvx - psiDot * self.Vehicle.wr/2, vvy + psiDot * self.Vehicle.lr, delta_3, omega3, self.Vehicle.Fz / self.Vehicle.n_tires)
-        ftx_4, fty_4, Mz_4 = self.Vehicle.Tire(vvx + psiDot * self.Vehicle.wr/2, vvy - psiDot * self.Vehicle.lr, delta_4, omega4, self.Vehicle.Fz / self.Vehicle.n_tires)
+        ftx_1, fty_1, Mz_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, omega1, self.Vehicle.Fz / self.Vehicle.n_tires)
+        ftx_2, fty_2, Mz_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, omega2, self.Vehicle.Fz / self.Vehicle.n_tires)
+        ftx_3, fty_3, Mz_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, omega3, self.Vehicle.Fz / self.Vehicle.n_tires)
+        ftx_4, fty_4, Mz_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, omega4, self.Vehicle.Fz / self.Vehicle.n_tires)
 
         # Convert tire forces to vehicle coordinate system
         fvx_1 = ftx_1 * np.cos(delta_1) - fty_1 * np.sin(delta_1) 
@@ -87,8 +62,6 @@ class Race:
         fvx_4 = ftx_4 * np.cos(delta_4) - fty_4 * np.sin(delta_4)
         fvy_4 = ftx_4 * np.sin(delta_4) + fty_4 * np.cos(delta_4)
 
-        # print(fvx_1, fvx_2, fvx_3, fvx_4)
-
         # Calculate other forces
         Fd = 0
         Frr = 0
@@ -101,86 +74,181 @@ class Race:
         ax = avx * np.cos(psi) - avy * np.sin(psi)
         ay = avx * np.sin(psi) + avy * np.cos(psi)
         tau_z = (fvy_1 + fvy_2) * self.Vehicle.lf - (fvy_3 + fvy_4) * self.Vehicle.lr + (fvx_2 - fvx_1) * self.Vehicle.wf / 2 + (fvx_4 - fvx_3) * self.Vehicle.wr / 2
-        psiDotDot = tau_z / self.Vehicle.Izz
+        psi_dot_dot = tau_z / self.Vehicle.Izz
 
         # Calculate accelerations in the wheels
-        omegaDot1 = (T1 - ftx_1 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
-        omegaDot2 = (T2 - ftx_2 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
-        omegaDot3 = (T3 - ftx_3 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
-        omegaDot4 = (T4 - ftx_4 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
+        # Deveria aqui ser considerado o raio dinâmico?
+        omega1_dot = (T1 - ftx_1 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
+        omega2_dot = (T2 - ftx_2 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
+        omega3_dot = (T3 - ftx_3 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
+        omega4_dot = (T4 - ftx_4 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
 
-        self.ax.append(ax)
-        self.ay.append(ay)
-        self.avx.append(avx)
-        self.avy.append(avy)
-        self.T1.append(T1)
-        self.T2.append(T2)
-        self.T3.append(T3)
-        self.T4.append(T4)
-        self.delta_1.append(delta_1)
-        self.delta_2.append(delta_2)
-        self.delta_3.append(delta_3)
-        self.delta_4.append(delta_4)
-        self.omega1.append(omega1)
-        self.omega2.append(omega2)
-        self.omega3.append(omega3)
-        self.omega4.append(omega4)
-        self.omegaDot1.append(omegaDot1)
-        self.omegaDot2.append(omegaDot2)
-        self.omegaDot3.append(omegaDot3)
-        self.omegaDot4.append(omegaDot4)
-        
-        uDot = [
-            vx,
-            vy,
-            ax,
-            ay,
-            psiDot,
-            psiDotDot,
-            omegaDot1,
-            omegaDot2,
-            omegaDot3,
-            omegaDot4
-        ]
-        return uDot        
+        if not post_process:
+            uDot = [
+                vx,
+                vy,
+                ax,
+                ay,
+                psi_dot,
+                psi_dot_dot,
+                omega1_dot,
+                omega2_dot,
+                omega3_dot,
+                omega4_dot
+            ]
+            return uDot   
+
+        else:
+            self.T1.append(T1)
+            self.T2.append(T2)
+            self.T3.append(T3)
+            self.T4.append(T4)
+            self.delta_1.append(delta_1)
+            self.delta_2.append(delta_2)
+            self.delta_3.append(delta_3)
+            self.delta_4.append(delta_4)
+            self.ftx_1.append(ftx_1)
+            self.fty_1.append(fty_1)
+            self.Mz_1.append(Mz_1)
+            self.ftx_2.append(ftx_2)
+            self.fty_2.append(fty_2)
+            self.Mz_2.append(Mz_2)
+            self.ftx_3.append(ftx_3)
+            self.fty_3.append(fty_3)
+            self.Mz_3.append(Mz_3)
+            self.ftx_4.append(ftx_4)
+            self.fty_4.append(fty_4)
+            self.Mz_4.append(Mz_4)
+            self.Frr.append(Frr)
+            self.Fd.append(Fd)
+
+            self.x.append(x)
+            self.y.append(y)
+            self.vx.append(vx)
+            self.vy.append(vy)
+            self.vvx.append(vvx)
+            self.vvy.append(vvy)
+            self.ax.append(ax)
+            self.ay.append(ay)
+            self.avx.append(avx)
+            self.avy.append(avy)
+            self.psi.append(psi)
+            self.psi_dot.append(psi_dot)
+            self.psi_dot_dot.append(psi_dot_dot)
+            self.omega1.append(omega1)
+            self.omega2.append(omega2)
+            self.omega3.append(omega3)
+            self.omega4.append(omega4)
+            self.omega1_dot.append(omega1_dot)
+            self.omega2_dot.append(omega2_dot)
+            self.omega3_dot.append(omega3_dot)
+            self.omega4_dot.append(omega4_dot)
 
     def solver(self):
-        time = [0]
+        self.time = [0]
+        self.solution = [[0, 0, 0, 0, 0, 0, 0, 0]]
         solver = integrate.LSODA(self.uDot, t0=0, y0=self.initialSolution, max_step=self.maxStep, t_bound=self.maxTime, rtol=self.rtol, atol=self.atol)
         while solver.status != 'finished':
             solver.step()
-            time.append(solver.t)
-            for i in range(len(self.solution)):
-                self.solution[i].append(solver.y[i])
+            self.time.append(solver.t)
+            self.solution.append(solver.y)
+        print("Solution Finished")
 
-        self.XY = Function(self.solution[0], self.solution[1])
-        self.X = Function(time, self.solution[0])
-        self.Y = Function(time, self.solution[1])
-        self.R = Function(np.sqrt(np.array( self.solution[0])**2 + np.array( self.solution[1])**2))
-        self.Vx = Function(time, self.solution[2])
-        self.Vy = Function(time, self.solution[3])
-        self.V = Function(time, np.sqrt(np.array( self.solution[2])**2 + np.array( self.solution[3])**2))
-        self.psi = Function(time, self.solution[4])
-        self.psiDot = Function(time, self.solution[5])
-        self.omega = Function(time, self.solution[6])
-        self.omegaDot = Function(time, self.solution[7])
-        self.T1 = Function(time, self.T1)
-        self.T2 = Function(time, self.T2)
-        self.T3 = Function(time, self.T3)
-        self.T4 = Function(time, self.T4)
-        self.delta_1 = Function(time, 180 / np.pi * np.array(self.delta_1))
-        self.delta_2 = Function(time, 180 / np.pi * np.array(self.delta_2))
-        self.delta_3 = Function(time, 180 / np.pi * np.array(self.delta_3))
-        self.delta_4 = Function(time, 180 / np.pi * np.array(self.delta_4))
-        self.ax = Function(time, self.ax)
-        self.ay = Function(time, self.ay)
-        self.avx = Function(time, self.avx)
-        self.avy = Function(time, self.avy)
-        self.omega1= Function(time, self.omega1)
-        self.omega2= Function(time, self.omega2)
-        self.omega3 = Function(time, self.omega3)
-        self.omega4 = Function(time, self.omega4)
-        self.omegaDot1 = Function(time, self.omegaDot1)
-        self.omegaDot2 = Function(time, self.omegaDot2)
-        self.omegaDot3 = Function(time, self.omegaDot3)
-        self.omegaDot4 = Function(time, self.omegaDot4)
+    def post_process(self):
+        self.T1 = [0]
+        self.T2 = [0]
+        self.T3 = [0]
+        self.T4 = [0]
+        self.delta_1 = [0]
+        self.delta_2 = [0]
+        self.delta_3 = [0]
+        self.delta_4 = [0]
+        self.ftx_1 = [0]
+        self.fty_1 = [0]
+        self.Mz_1 = [0]
+        self.ftx_2 = [0]
+        self.fty_2 = [0]
+        self.Mz_2 = [0]
+        self.ftx_3 = [0]
+        self.fty_3 = [0]
+        self.Mz_3 = [0]
+        self.ftx_4 = [0]
+        self.fty_4 = [0]
+        self.Mz_4 = [0]
+        self.Frr = [0]
+        self.Fd = [0]
+
+        self.x = [0]
+        self.y = [0]
+        self.vx = [0]
+        self.vy = [0]
+        self.vvx = [0]
+        self.vvy = [0]
+        self.ax = [0]
+        self.ay = [0]
+        self.avx = [0]
+        self.avy = [0]
+        self.psi = [0]
+        self.psi_dot = [0]
+        self.psi_dot_dot = [0]
+        self.omega1 = [0]
+        self.omega2 = [0]
+        self.omega3 = [0]
+        self.omega4 = [0]
+        self.omega1_dot = [0]
+        self.omega2_dot = [0]
+        self.omega3_dot = [0]
+        self.omega4_dot = [0]
+
+        for i in range(1, len(self.solution)):
+            # print(self.solution)
+            # print(self.time)
+            self.uDot(self.time[i], self.solution[i], post_process=True)
+
+        self.T1 = Function(self.time, self.T1, xlabel='Time (s)', ylabel='Front Left tire torque (Nm)', name='T1')
+        self.T2 = Function(self.time, self.T2, xlabel='Time (s)', ylabel='Front Right tire torque (Nm)', name='T2')
+        self.T3 = Function(self.time, self.T3, xlabel='Time (s)', ylabel='Rear Left tire torque (Nm)', name='T3')
+        self.T4 = Function(self.time, self.T4, xlabel='Time (s)', ylabel='Rear Right tire torque (Nm)', name='T4')
+        self.delta_1 = Function(self.time, 180 / np.pi * np.array(self.delta_1), xlabel='Time (s)', ylabel='Front Left tire steering angle (degrees)', name='δ1')
+        self.delta_2 = Function(self.time, 180 / np.pi * np.array(self.delta_2), xlabel='Time (s)', ylabel='Front Right tire steering angle (degrees)', name='δ2')
+        self.delta_3 = Function(self.time, 180 / np.pi * np.array(self.delta_3), xlabel='Time (s)', ylabel='Rear Left tire steering angle (degrees)', name='δ3')
+        self.delta_4 = Function(self.time, 180 / np.pi * np.array(self.delta_4), xlabel='Time (s)', ylabel='Rear Right tire steering angle (degrees)', name='δ4')
+        self.ftx_1 = Function(self.time, self.ftx_1, xlabel='Time (s)', ylabel='Front Left tire force in tire x axis (Nm)', name='ftx_1')
+        self.fty_1 = Function(self.time, self.fty_1, xlabel='Time (s)', ylabel='Front Left tire force in tire y axis (Nm)', name='fty_1')
+        self.Mz_1 = Function(self.time, self.Mz_1, xlabel='Time (s)', ylabel='Front Left tire moment in tire z axis (Nm)', name='Mz_1')
+        self.ftx_2 = Function(self.time, self.ftx_2, xlabel='Time (s)', ylabel='Front Right tire force in tire x axis (Nm)', name='ftx_2')
+        self.fty_2 = Function(self.time, self.fty_2, xlabel='Time (s)', ylabel='Front Right tire force in tire y axis (Nm)', name='fty_2')
+        self.Mz_2 = Function(self.time, self.Mz_2, xlabel='Time (s)', ylabel='Front Right tire moment in tire z axis (Nm)', name='Mz_2')
+        self.ftx_3 = Function(self.time, self.ftx_3, xlabel='Time (s)', ylabel='Rear Left tire force in tire x axis (Nm)', name='ftx_3')
+        self.fty_3 = Function(self.time, self.fty_3, xlabel='Time (s)', ylabel='Rear Left tire force in tire y axis (Nm)', name='fty_3')
+        self.Mz_3 = Function(self.time, self.Mz_3, xlabel='Time (s)', ylabel='Rear Left tire moment in tire z axis (Nm)', name='Mz_3')
+        self.ftx_4 = Function(self.time, self.ftx_4, xlabel='Time (s)', ylabel='Rear Right tire force in tire x axis (Nm)', name='ftx_4')
+        self.fty_4 = Function(self.time, self.fty_4, xlabel='Time (s)', ylabel='Rear Right tire force in tire y axis (Nm)', name='fty_4')
+        self.Mz_4 = Function(self.time, self.Mz_4, xlabel='Time (s)', ylabel='Rear Right tire moment in tire z axis (Nm)', name='Mz_4')
+        self.Frr = Function(self.time, self.Frr, xlabel='Time (s)', ylabel='Total roling resistance (N)', name='Frr')
+        self.Fd = Function(self.time, self.Fd, xlabel='Time (s)', ylabel='Drag force (N)', name='Fd')
+
+        self.r = Function(self.time, np.sqrt(np.array(self.x)**2 + np.array(self.y)**2), xlabel='Time (s)', ylabel='Distance from the origin (m)', name='r')
+        self.v = Function(self.time, np.sqrt(np.array(self.vx)**2 + np.array(self.vy)**2), xlabel='Time (s)', ylabel='Velocity (m)', name='v')
+        self.xy = Function(self.x, self.y, xlabel='Position in inertial frame x axis (m)', ylabel='Position in inertial frame y axis (m)', name='xy')
+        self.x = Function(self.time, self.x, xlabel='Time (s)', ylabel='Position in inertial frame x axis (m)', name='x')
+        self.y = Function(self.time, self.y, xlabel='Time (s)', ylabel='Position in inertial frame y axis (m)', name='y')
+        self.vx = Function(self.time, self.vx, xlabel='Time (s)', ylabel='Velocity in inertial frame x axis (m/s)', name='vx')
+        self.vy = Function(self.time, self.vy, xlabel='Time (s)', ylabel='Velocity in inertial frame y axis (m/s)', name='vy')
+        self.vvx = Function(self.time, self.vvx, xlabel='Time (s)', ylabel='Velocity in vehicle frame x axis (m/s)', name='vvx')
+        self.vvy = Function(self.time, self.vvy, xlabel='Time (s)', ylabel='Velocity in vehicle frame y axis (m/s)', name='vvy')
+        self.ax = Function(self.time, self.ax, xlabel='Time (s)', ylabel='Acceleration in inertial frame x axis (m/s²)', name='ax')
+        self.ay = Function(self.time, self.ay, xlabel='Time (s)', ylabel='Acceleration in inertial frame y axis (m/s²)', name='ay')
+        self.avx = Function(self.time, self.avx, xlabel='Time (s)', ylabel='Acceleration in vehicle frame x axis (m/s²)', name='avx')
+        self.avy = Function(self.time, self.avy, xlabel='Time (s)', ylabel='Acceleration in vehicle frame y axis (m/s²)', name='avy')
+        self.psi = Function(self.time,  180 / np.pi * np.array(self.psi), xlabel='Time (s)', ylabel='Picht angle (degrees)', name='psi')
+        self.psi_dot = Function(self.time, self.psi_dot, xlabel='Time (s)', ylabel='Picht angular velocity (rad/s)', name='psi_dot')
+        self.psi_dot_dot = Function(self.time, self.psi_dot_dot, xlabel='Time (s)', ylabel='Picht angular acceleration (rad/s²)', name='psi_dot_dot')
+        self.omega1= Function(self.time, self.omega1, xlabel='Time (s)', ylabel='Front Left tire angular velocity (rad/s)', name='ω1')
+        self.omega2= Function(self.time, self.omega2, xlabel='Time (s)', ylabel='Front Right tire angular velocity (rad/s)', name='ω2')
+        self.omega3 = Function(self.time, self.omega3, xlabel='Time (s)', ylabel='Rear Left tire angular velocity (rad/s)', name='ω3')
+        self.omega4 = Function(self.time, self.omega4, xlabel='Time (s)', ylabel='Rear Right tire angular velocity (rad/s)', name='ω4')
+        self.omega1_dot = Function(self.time, self.omega1_dot, xlabel='Time (s)', ylabel='Front Left tire angular acceleration (rad/s²)', name='ω1_dot')
+        self.omega2_dot = Function(self.time, self.omega2_dot, xlabel='Time (s)', ylabel='Front Right tire angular acceleration (rad/s²)', name='ω2_dot')
+        self.omega3_dot = Function(self.time, self.omega3_dot, xlabel='Time (s)', ylabel='Rear Left tire angular acceleration (rad/s²)', name='ω3_dot')
+        self.omega4_dot = Function(self.time, self.omega4_dot, xlabel='Time (s)', ylabel='Rear Right tire angular acceleration (rad/s²)', name='ω4_dot')

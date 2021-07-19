@@ -84,6 +84,7 @@ class Function:
         upper = self.I[1] if upper is None else upper
         X = np.linspace(lower, upper, 10001)
         Y = self.getValue(X)
+        if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
         fig.update_layout(title=title,
@@ -101,6 +102,7 @@ class Function:
         # Função para gerar os plots que serão utilizados no relatório.
         X = self.__X_source__
         Y = self.__Y_source__
+        if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
         fig.update_layout(title=title,
@@ -204,6 +206,7 @@ class Function:
         upper = self.I[1] if upper is None else upper
         X = np.linspace(lower, upper, 1001)
         Y = self.getValue(X)
+        if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__ + ' Comparison '
 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))

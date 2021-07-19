@@ -58,7 +58,7 @@ class Driver:
 
     def proportional_accelerator(self, V):
         K = 100
-        Vref = 60
+        Vref = 10
         dV = Vref - V
         return K * dV
 
