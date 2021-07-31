@@ -2,6 +2,9 @@ import numpy as np
 from Function import Function
 from scipy import integrate
 
+# For the animation class
+import sys, pygame
+
 class Race:
     def __init__(self, 
         Vehicle, 
@@ -252,3 +255,43 @@ class Race:
         self.omega2_dot = Function(self.time, self.omega2_dot, xlabel='Time (s)', ylabel='Front Right tire angular acceleration (rad/s²)', name='ω2_dot')
         self.omega3_dot = Function(self.time, self.omega3_dot, xlabel='Time (s)', ylabel='Rear Left tire angular acceleration (rad/s²)', name='ω3_dot')
         self.omega4_dot = Function(self.time, self.omega4_dot, xlabel='Time (s)', ylabel='Rear Right tire angular acceleration (rad/s²)', name='ω4_dot')
+
+
+    def mapi(self, x, y, xlim, ylim, size):
+        x_factor = size[0] / xlim
+        y_factor = size[1] / ylim
+        return [x * x_factor, y * y_factor]
+
+    def animate(self, timeMax):
+        # Initialization
+        xlim = max(self.x.__Y_source__)
+        ylim = max(self.y.__Y_source__) + 1e-3
+        pygame.init()
+        # font = pygame.font.SysFont('Helvetica', 28)
+
+        # Defining auxiliar colors 
+        # white = 0, 0, 0
+        
+        # Creating animation screen
+        size = 1920, 1080
+        screen = pygame.display.set_mode(size)
+        
+        # Preparing images
+        background = pygame.image.load('../Animation/TrackT01.png')
+        background = pygame.transform.scale(background, (size))
+
+        car = pygame.image.load('../Animation/Car.png')
+        car = pygame.transform.scale(car, (128, 128))
+        position = [0, size[1]-128*1.5]
+
+        timeCount = 0
+        while timeCount <= timeMax:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT: sys.exit()
+
+            screen.blit(background, [0, 0])
+
+            position = [0, size[1]-128*1.5] + self.mapi(self.x(timeCount), -self.y(timeCount), xlim, ylim, size)          
+            screen.blit(car, position)
+            pygame.display.flip()
+            timeCount += 1e-2
