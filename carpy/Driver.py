@@ -66,3 +66,8 @@ class Driver:
         if time <= 30: return 0
         elif 30 < time <= 32: return (time - 30) * 3 / 2 * np.pi / 180;
         else: return 3 * np.pi / 180
+    
+    def Scurve(self, time, angle = 3):
+        if time <= 30: return 0
+        elif 30 < time <= 50: return (angle *  np.pi / 180) * np.sin((time - 30) * 2 *  np.pi / 180);
+        else: return 3 * np.pi / 180
