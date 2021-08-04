@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.type_check import real
 from Function import Function
 from scipy import integrate
 
@@ -51,6 +52,10 @@ class Race:
         ftx_2, fty_2, Mz_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, omega2, self.Vehicle.Fz / self.Vehicle.n_tires)
         ftx_3, fty_3, Mz_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, omega3, self.Vehicle.Fz / self.Vehicle.n_tires)
         ftx_4, fty_4, Mz_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, omega4, self.Vehicle.Fz / self.Vehicle.n_tires)
+        Trr1 = self.Vehicle.Tire.get_rolling_resistance(omega1, self.Vehicle.Fz / self.Vehicle.n_tires)
+        Trr2 = self.Vehicle.Tire.get_rolling_resistance(omega2, self.Vehicle.Fz / self.Vehicle.n_tires)
+        Trr3 = self.Vehicle.Tire.get_rolling_resistance(omega3, self.Vehicle.Fz / self.Vehicle.n_tires)
+        Trr4 = self.Vehicle.Tire.get_rolling_resistance(omega4, self.Vehicle.Fz / self.Vehicle.n_tires)
 
         # Convert tire forces to vehicle coordinate system
         fvx_1 = ftx_1 * np.cos(delta_1) - fty_1 * np.sin(delta_1) 
@@ -66,11 +71,10 @@ class Race:
         fvy_4 = ftx_4 * np.sin(delta_4) + fty_4 * np.cos(delta_4)
 
         # Calculate other forces
-        Fd = 0
-        Frr = 0
+        Fd = -1 / 2 * self.Vehicle.rho * self.Vehicle.cd * vvx**2 * self.Vehicle.af * np.sign(vvx)
 
         # Calculate accelerations in vehivle coordinate system
-        avx = (fvx_1 + fvx_2 + fvx_3 + fvx_4 + Frr + Fd) / self.Vehicle.vehicle_equivalent_mass
+        avx = (fvx_1 + fvx_2 + fvx_3 + fvx_4 + Fd) / self.Vehicle.vehicle_equivalent_mass
         avy = (fvy_1 + fvy_2 + fvy_3 + fvy_4) / self.Vehicle.vehicle_equivalent_mass
 
         # Calculete state space accelerations
@@ -81,10 +85,10 @@ class Race:
 
         # Calculate accelerations in the wheels
         # Deveria aqui ser considerado o raio dinâmico?
-        omega1_dot = (T1 - ftx_1 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
-        omega2_dot = (T2 - ftx_2 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
-        omega3_dot = (T3 - ftx_3 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
-        omega4_dot = (T4 - ftx_4 * self.Vehicle.Tire.tire_radius) / self.Vehicle.Tire.Jzz
+        omega1_dot = (T1 - ftx_1 * self.Vehicle.Tire.tire_radius + Trr1) / self.Vehicle.Tire.Jzz
+        omega2_dot = (T2 - ftx_2 * self.Vehicle.Tire.tire_radius + Trr2) / self.Vehicle.Tire.Jzz
+        omega3_dot = (T3 - ftx_3 * self.Vehicle.Tire.tire_radius + Trr3) / self.Vehicle.Tire.Jzz
+        omega4_dot = (T4 - ftx_4 * self.Vehicle.Tire.tire_radius + Trr4) / self.Vehicle.Tire.Jzz
 
         if not post_process:
             uDot = [
@@ -122,7 +126,7 @@ class Race:
             self.ftx_4.append(ftx_4)
             self.fty_4.append(fty_4)
             self.Mz_4.append(Mz_4)
-            self.Frr.append(Frr)
+            self.Trr.append(Trr1 + Trr2 + Trr3 + Trr4)
             self.Fd.append(Fd)
 
             self.x.append(x)
@@ -178,7 +182,7 @@ class Race:
         self.ftx_4 = [0]
         self.fty_4 = [0]
         self.Mz_4 = [0]
-        self.Frr = [0]
+        self.Trr = [0]
         self.Fd = [0]
 
         self.x = [0]
@@ -228,7 +232,7 @@ class Race:
         self.ftx_4 = Function(self.time, self.ftx_4, xlabel='Time (s)', ylabel='Rear Right tire force in tire x axis (Nm)', name='ftx_4')
         self.fty_4 = Function(self.time, self.fty_4, xlabel='Time (s)', ylabel='Rear Right tire force in tire y axis (Nm)', name='fty_4')
         self.Mz_4 = Function(self.time, self.Mz_4, xlabel='Time (s)', ylabel='Rear Right tire moment in tire z axis (Nm)', name='Mz_4')
-        self.Frr = Function(self.time, self.Frr, xlabel='Time (s)', ylabel='Total roling resistance (N)', name='Frr')
+        self.Trr = Function(self.time, self.Trr, xlabel='Time (s)', ylabel='Total roling resistance (Nm)', name='Trr')
         self.Fd = Function(self.time, self.Fd, xlabel='Time (s)', ylabel='Drag force (N)', name='Fd')
 
         self.r = Function(self.time, np.sqrt(np.array(self.x)**2 + np.array(self.y)**2), xlabel='Time (s)', ylabel='Distance from the origin (m)', name='r')
@@ -256,42 +260,65 @@ class Race:
         self.omega3_dot = Function(self.time, self.omega3_dot, xlabel='Time (s)', ylabel='Rear Left tire angular acceleration (rad/s²)', name='ω3_dot')
         self.omega4_dot = Function(self.time, self.omega4_dot, xlabel='Time (s)', ylabel='Rear Right tire angular acceleration (rad/s²)', name='ω4_dot')
 
+    def blitRotateCenter(self, surf, image, topleft, angle):
 
-    def mapi(self, x, y, xlim, ylim, size):
+        rotated_image = pygame.transform.rotate(image, angle)
+        new_rect = rotated_image.get_rect(center = image.get_rect(topleft = topleft).center)
+
+        surf.blit(rotated_image, new_rect)
+        
+    def mapi(self, x, y, xlim, ylim, size, realScale=True):
         x_factor = size[0] / xlim
         y_factor = size[1] / ylim
-        return [x * x_factor, y * y_factor]
+        if realScale:
+            if x_factor > y_factor:
+                x_factor = y_factor
+            else:
+                y_factor = x_factor
+        return np.array([x * x_factor, y * y_factor])
 
     def animate(self, timeMax):
         # Initialization
         xlim = max(self.x.__Y_source__)
         ylim = max(self.y.__Y_source__) + 1e-3
         pygame.init()
-        # font = pygame.font.SysFont('Helvetica', 28)
+        pygame.display.init()
+        font = pygame.font.SysFont('Helvetica', 32)
 
         # Defining auxiliar colors 
         # white = 0, 0, 0
+        line_colour = 0, 0, 0
         
         # Creating animation screen
-        size = 1920, 1080
+        size = np.array([1920, 1080])
         screen = pygame.display.set_mode(size)
         
         # Preparing images
         background = pygame.image.load('../Animation/TrackT01.png')
-        background = pygame.transform.scale(background, (size))
+        background = (pygame.transform.scale(background, (size)))
 
         car = pygame.image.load('../Animation/Car.png')
         car = pygame.transform.scale(car, (128, 128))
-        position = [0, size[1]-128*1.5]
-
+        initial_position = np.array([0, size[1]-128])
+        position = initial_position
+        last_position = position
         timeCount = 0
+
         while timeCount <= timeMax:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: sys.exit()
 
-            screen.blit(background, [0, 0])
+            position = initial_position + self.mapi(self.x(timeCount), -self.y(timeCount), xlim, ylim, size-np.array([128,128]), realScale=True)     
+            tempo = font.render("Tempo : {:.1f}s".format(timeCount), True, (255, 255, 255))
+            velocidade = font.render("Velocidade : {:.1f}km/h".format(self.v(timeCount) * 3.6), True, (255, 255, 255))
 
-            position = [0, size[1]-128*1.5] + self.mapi(self.x(timeCount), -self.y(timeCount), xlim, ylim, size)          
-            screen.blit(car, position)
+            screen.blit(background, (0, 0))
+            screen.blit(tempo, (5, 0))  
+            screen.blit(velocidade, (5, 35))  
+            pygame.draw.aaline(screen, line_colour, last_position, position)
+            self.blitRotateCenter(screen, car, position, self.psi(timeCount))
             pygame.display.flip()
-            timeCount += 1e-2
+
+            timeCount += 1e-1/5
+            last_position = position
+        pygame.display.quit()

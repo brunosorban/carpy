@@ -3,7 +3,7 @@ from Function import Function
 from TMEasy import Tire
 
 class Vehicle:
-    def __init__(self, tire, vehicle_mass, Izz, lf, lr, wf, wr):
+    def __init__(self, tire, vehicle_mass, Izz, lf, lr, wf, wr, af, cd, rho=1.225):
         self.Tire = tire
         self.n_tires = 4
         self.vehicle_mass = vehicle_mass
@@ -12,6 +12,9 @@ class Vehicle:
         self.lr = lr
         self.wf = wf
         self.wr = wr
+        self.af = af
+        self.cd = cd
+        self.rho = rho
         # self.CG_height = CG_height
         # self.load_mass = load_mass
         # self.load_height = load_height

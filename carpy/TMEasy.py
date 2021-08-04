@@ -6,7 +6,7 @@ Castro. The implmentation is based on the Matlab code presented at Road Vehicle
 Dynamics, second edition.'''
 
 class Tire:
-    def __init__(self, radius, Jzz, cz, dfx0, dfy0, Fxm, Fym, Sxm, Sym, Fxs, Fys, Sxs, Sys, Sy0, SyE, lamb, n2L0):
+    def __init__(self, radius, Jzz, cz, dfx0, dfy0, Fxm, Fym, Sxm, Sym, Fxs, Fys, Sxs, Sys, Sy0, SyE, lamb, n2L0, frr):
         self.tire_radius = radius
         self.Jzz = Jzz
         self.cz = cz
@@ -24,6 +24,7 @@ class Tire:
         self.SyE = SyE
         self.lamb = lamb
         self.n2L0 = n2L0
+        self.frr = frr
 
         # Calculate tire parameters
         self.hsxn = Sxm / (Sxm + Sym) + Fxm / (dfx0 * (Fxm / dfx0 + Fym / dfy0))
@@ -110,12 +111,17 @@ class Tire:
             cphi = sphi = np.sqrt(2) / 2
         
         df0 = np.sqrt((self.dfx0 * self.hsxn * cphi)**2 + (self.dfy0 * self.hsyn * sphi)**2)
-        Fm = np.sqrt((self.Fxm * cphi)**2 + (self.Fym * sphi)**2);
-        Sm = np.sqrt((self.Sxm / self.hsxn * cphi)**2 + (self.Sym / self.hsyn * sphi)**2);
-        Fs = np.sqrt((self.Fxs * cphi)**2 + (self.Fys * sphi)**2);
-        Ss = np.sqrt((self.Sxs / self.hsxn * cphi)**2 + (self.Sys / self.hsyn * sphi)**2);
-        F, dF = self.__tire_combined_forces__(Sn, df0, Fm, Sm, Fs, Ss);
-        Fx = F * cphi;
-        Fy = F * sphi;
-        Mz = -N * Fy;
+        Fm = np.sqrt((self.Fxm * cphi)**2 + (self.Fym * sphi)**2)
+        Sm = np.sqrt((self.Sxm / self.hsxn * cphi)**2 + (self.Sym / self.hsyn * sphi)**2)
+        Fs = np.sqrt((self.Fxs * cphi)**2 + (self.Fys * sphi)**2)
+        Ss = np.sqrt((self.Sxs / self.hsxn * cphi)**2 + (self.Sys / self.hsyn * sphi)**2)
+        F, dF = self.__tire_combined_forces__(Sn, df0, Fm, Sm, Fs, Ss)
+        Fx = F * cphi
+        Fy = F * sphi
+        Mz = -N * Fy
         return Fx, Fy, Mz
+
+    def get_rolling_resistance(self, omega, Fz):
+        Rd = self.lamb * self.tire_radius + (1 - self.lamb) * (self.tire_radius - Fz / self.cz)
+        Ty = - Rd * omega / (abs(Rd * omega) + 0.001) * Fz * self.tire_radius * self.frr
+        return Ty
