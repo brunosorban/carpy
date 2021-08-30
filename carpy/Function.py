@@ -51,54 +51,54 @@ class Function:
     
     def plot2D(self, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
         # Função para gerar os plots que serão utilizados no relatório.
-        if style: plt.style.use('science')
-        lower = self.I[0] if lower is None else lower
-        upper = self.I[1] if upper is None else upper
-        X = np.linspace(lower, upper, 1001)
-        Y = self.getValue(X)
+        if style == 'matplotlib' or style == 'science':
+            if style == 'science': plt.style.use('science')
+            lower = self.I[0] if lower is None else lower
+            upper = self.I[1] if upper is None else upper
+            X = np.linspace(lower, upper, 2001)
+            Y = self.getValue(X)
 
-        plt.figure(figsize=(8.09016994375, 5))
-        plt.plot(X, Y)
-        plt.xlabel(self.__X_source_label__, fontsize=14)
-        plt.ylabel(self.__Y_source_label__, fontsize=14)
-        plt.title(title, fontsize=16)
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
-        plt.xscale(xscale)
-        plt.yscale(yscale)
-        plt.grid()
+            plt.figure(figsize=(8.09016994375, 5))
+            plt.plot(X, Y)
+            plt.xlabel(self.__X_source_label__, fontsize=14)
+            plt.ylabel(self.__Y_source_label__, fontsize=14)
+            plt.title(title, fontsize=16)
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
+            plt.xscale(xscale)
+            plt.yscale(yscale)
+            plt.grid()
 
-        if self.name: plt.legend([self.name])
+            if self.name: plt.legend([self.name])
 
-        if type(export) == bool:
-            if export:
-                plt.savefig(title + '.pdf')
-        elif type(export) == str:
-            plt.savefig(export + '.pdf')
+            if type(export) == bool:
+                if export:
+                    plt.savefig(title + '.pdf')
+            elif type(export) == str:
+                plt.savefig(export + '.pdf')
 
-        if display: plt.show()
+            if display: plt.show()
 
-    def plot2D2(self, title='', lower=None, upper=None, export=False, display=True):
-        # Função para gerar os plots que serão utilizados no relatório.
-        lower = self.I[0] if lower is None else lower
-        upper = self.I[1] if upper is None else upper
-        X = np.linspace(lower, upper, 10001)
-        Y = self.getValue(X)
-        if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
-        fig.update_layout(title=title,
-                   xaxis_title=self.__X_source_label__,
-                   yaxis_title=self.__Y_source_label__)
-        if type(export) == bool:
-            if export:
-                fig.write_image(title + '.svg')
-        elif type(export) == str:
-            fig.write_image(export + '.pdf')
+        else: # Uses plotly
+            lower = self.I[0] if lower is None else lower
+            upper = self.I[1] if upper is None else upper
+            X = np.linspace(lower, upper, 10001)
+            Y = self.getValue(X)
+            if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
+            fig.update_layout(title=title,
+                    xaxis_title=self.__X_source_label__,
+                    yaxis_title=self.__Y_source_label__)
+            if type(export) == bool:
+                if export:
+                    fig.write_image(title + '.svg')
+            elif type(export) == str:
+                fig.write_image(export + '.pdf')
 
-        if display: fig.show()
+            if display: fig.show()
 
-    def plotparametric(self, title='', lower=None, upper=None, export=False, display=True):
+    def plotparametric(self, title='', export=False, display=True):
         # Função para gerar os plots que serão utilizados no relatório.
         X = self.__X_source__
         Y = self.__Y_source__
@@ -113,118 +113,120 @@ class Function:
                 fig.write_image(title + '.svg')
         elif type(export) == str:
             fig.write_image(export + '.pdf')
-
+        fig.update_yaxes(
+            scaleanchor = "x",
+            scaleratio = 1,
+        )
         if display: fig.show()
 
-    def compara2Plots2(self, dataB, title='', lower=None, upper=None, export=False, display=True):
+    def compara2Plots(self, dataB, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
         # Função para gerar os plots que serão utilizados no relatório.
-        lower = self.I[0] if lower is None else lower
-        upper = self.I[1] if upper is None else upper
-        X = np.linspace(lower, upper, 10001)
-        Y = self.getValue(X)
-        Yb = dataB.getValue(X)
+        if style == 'matplotlib' or style == 'science':
+            if style == 'science': plt.style.use('science')
+            lower = self.I[0] if lower is None else lower
+            upper = self.I[1] if upper is None else upper
+            X = np.linspace(lower, upper, 2001)
+            Y = self.getValue(X)
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
-        fig.add_trace(go.Scatter(x=X, y=Yb, name=dataB.name))
-        fig.update_layout(title=title,
-                   xaxis_title=self.__X_source_label__,
-                   yaxis_title=self.__Y_source_label__)
-        if type(export) == bool:
-            if export:
-                fig.write_image(title + '.svg')
-        elif type(export) == str:
-            fig.write_image(export + '.pdf')
+            plt.figure(figsize=(8.09016994375, 5))
+            plt.plot(X, Y, dataB.X, dataB.Y)
+            plt.xlabel(self.__X_source_label__, fontsize=14)
+            plt.ylabel(self.__Y_source_label__, fontsize=14)
+            plt.title(title, fontsize=16)
+            plt.xticks(fontsize = 12)
+            plt.yticks(fontsize = 12)
+            plt.xscale(xscale)
+            plt.yscale(yscale)
+            plt.grid()
+            if self.name: plt.legend([self.name, dataB.name])
 
-        if display: fig.show()
+            if type(export) == bool:
+                if export:
+                    plt.savefig(title + '.pdf')
+            elif type(export) == str:
+                plt.savefig(export + '.pdf')
+
+            plt.show()
+        
+        else:
+            lower = self.I[0] if lower is None else lower
+            upper = self.I[1] if upper is None else upper
+            X = np.linspace(lower, upper, 10001)
+            Y = self.getValue(X)
+            Yb = dataB.getValue(X)
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
+            fig.add_trace(go.Scatter(x=X, y=Yb, name=dataB.name))
+            fig.update_layout(title=title,
+                    xaxis_title=self.__X_source_label__,
+                    yaxis_title=self.__Y_source_label__)
+            if type(export) == bool:
+                if export:
+                    fig.write_image(title + '.svg')
+            elif type(export) == str:
+                fig.write_image(export + '.pdf')
+
+            if display: fig.show()
+            # return fig
     
-    def compara2Plots(self, dataB, title='', export=False, xscale="linear", yscale="linear", reversex=False, lower=None, upper=None):
-        # Função para gerar os plots comparativos que serão utilizados no relatório.
-        lower = self.I[0] if lower is None else lower
-        upper = self.I[1] if upper is None else upper
-        X = np.linspace(lower, upper, 1001)
-        Y = self.getValue(X)
+    def comparaNPlots(self, data, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+        # Function use to compare plots. Insert a lists of plots that should be compared with the main plot (function used to call the compare plot)
+        if style == 'matplotlib' or style == 'science':
+            if style == 'science': plt.style.use('science')
+            lower = self.I[0] if lower is None else lower
+            upper = self.I[1] if upper is None else upper
+            X = np.linspace(lower, upper, 2001)
+            Y = self.getValue(X)
 
-        plt.figure(figsize=(8.09016994375, 5))
-        plt.plot(X, Y, dataB.X, dataB.Y)
-        plt.xlabel(self.__X_source_label__, fontsize=14)
-        plt.ylabel(self.__Y_source_label__, fontsize=14)
-        plt.title(title, fontsize=16)
-        plt.xticks(fontsize = 12)
-        plt.yticks(fontsize = 12)
-        plt.xscale(xscale)
-        plt.yscale(yscale)
-        plt.grid()
-        if reversex: plt.gca().invert_xaxis()
-        if self.name: plt.legend([self.name, dataB.name])
-
-        if type(export) == bool:
-            if export:
-                plt.savefig(title + '.pdf')
-        elif type(export) == str:
-            plt.savefig(export + '.pdf')
-
-        plt.show()
-    
-    def comparaNPlots(self, data, title='', export=False, xscale="linear", yscale="linear", reversex=False, lw=1, ls='-', lower=None, upper=None):
-        # Função para gerar os plots comparativos que serão utilizados no relatório.
-        lower = self.I[0] if lower is None else lower
-        upper = self.I[1] if upper is None else upper
-        X = np.linspace(lower, upper, 1001)
-        Y = self.getValue(X)
-
-        plt.plot(X, Y, ls=ls, linewidth=lw)
-        for i in range(len(data)):
-            plt.plot(X, data[i].getValue(X), ls=ls, linewidth=lw)
-        plt.xlabel(self.__X_source_label__, fontsize=14)
-        plt.ylabel(self.__Y_source_label__, fontsize=14)
-        plt.title(title, fontsize=16)
-        plt.xticks(fontsize = 12)
-        plt.yticks(fontsize = 12)
-        plt.xscale(xscale)
-        plt.yscale(yscale)
-        plt.grid()
-        if reversex: plt.gca().invert_xaxis()
-        if self.name: 
-            legenda = [self.name]
+            plt.plot(X, Y)
             for i in range(len(data)):
-                legenda.append(data[i].name)
-            plt.legend(legenda)
-                
+                plt.plot(X, data[i].getValue(X))
+            plt.xlabel(self.__X_source_label__, fontsize=14)
+            plt.ylabel(self.__Y_source_label__, fontsize=14)
+            plt.title(title, fontsize=16)
+            plt.xticks(fontsize = 12)
+            plt.yticks(fontsize = 12)
+            plt.xscale(xscale)
+            plt.yscale(yscale)
+            plt.grid()
+            if self.name: 
+                legenda = [self.name]
+                for i in range(len(data)):
+                    legenda.append(data[i].name)
+                plt.legend(legenda)
 
-        if type(export) == bool:
-            if export:
-                plt.savefig(title + '.pdf')
-        elif type(export) == str:
-            plt.savefig(export + '.pdf')
+            if type(export) == bool:
+                if export:
+                    plt.savefig(title + '.pdf')
+            elif type(export) == str:
+                plt.savefig(export + '.pdf')
 
-        plt.show()
+            plt.show()
 
-    def comparaNPlots2(self, data, title='', lower=None, upper=None, export=False, display=True):
-        # Função para gerar os plots comparativos que serão utilizados no relatório.
-        lower = self.I[0] if lower is None else lower
-        upper = self.I[1] if upper is None else upper
-        X = np.linspace(lower, upper, 1001)
-        Y = self.getValue(X)
-        if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__ + ' Comparison '
+        else:
+            lower = self.I[0] if lower is None else lower
+            upper = self.I[1] if upper is None else upper
+            X = np.linspace(lower, upper, 2001)
+            Y = self.getValue(X)
+            if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__ + ' Comparison '
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
 
-        for i in range(len(data)):
-            fig.add_trace(go.Scatter(x=X, y=data[i].getValue(X), name=data[i].name))
+            for i in range(len(data)):
+                fig.add_trace(go.Scatter(x=X, y=data[i].getValue(X), name=data[i].name))
 
-        fig.update_layout(title=title,
-                   xaxis_title=self.__X_source_label__,
-                   yaxis_title=self.__Y_source_label__)
-        if type(export) == bool:
-            if export:
-                fig.write_image(title + '.svg')
-        elif type(export) == str:
-            fig.write_image(export + '.pdf')
+            fig.update_layout(title=title,
+                    xaxis_title=self.__X_source_label__,
+                    yaxis_title=self.__Y_source_label__)
+            if type(export) == bool:
+                if export:
+                    fig.write_image(title + '.svg')
+            elif type(export) == str:
+                fig.write_image(export + '.pdf')
 
-        if display: fig.show()
-
+            if display: fig.show()
 
     def splineLinear(self, x):
         # Nome do método: "linear"

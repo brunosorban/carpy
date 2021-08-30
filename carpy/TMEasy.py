@@ -1,5 +1,6 @@
 import numpy as np
 from Function import Function
+import plotly.graph_objects as go
 
 ''' Here lies an inplementation of TMEasy tire model from George Rill and Abel
 Castro. The implmentation is based on the Matlab code presented at Road Vehicle 
@@ -119,9 +120,78 @@ class Tire:
         Fx = F * cphi
         Fy = F * sphi
         Mz = -N * Fy
-        return Fx, Fy, Mz
+        return Fx, Fy, Mz, Sx, Sy
 
     def get_rolling_resistance(self, omega, Fz):
         Rd = self.lamb * self.tire_radius + (1 - self.lamb) * (self.tire_radius - Fz / self.cz)
         Ty = - Rd * omega / (abs(Rd * omega) + 0.001) * Fz * self.tire_radius * self.frr
         return Ty
+
+    # def generate_data(self):
+    #     a=1
+
+    # def IPD(dados,blocos,p):
+    #     resultado = np.zeros(blocos)
+    #     for x in range(resultado.shape[0]):
+    #         for y in range(resultado.shape[1]):
+    #             dist = np.sqrt((x-dados[:,0])**2+(y-dados[:,1])**2)
+    #             if 0 in dist:
+    #                 ind = np.where(dist == 0)
+    #                 resultado[x,y] = dados[ind[0][0],2]
+    #             else:
+    #                 resultado[x,y] = np.sum((1/dist**p)*dados[:,2])/np.sum(1/dist**p)
+    #     return resultado
+
+    def all_info(self, Fz=3500):
+        # Longitudinal slip
+        Sx = np.linspace(-0.5, 0.5, 1001)
+        sy = [0, 0.11, 0.22, 0.33, 0.44, 0.55]
+        forces = []
+        for slipy in sy:
+            Fx = [self.get_tire_forces(Sx[i], slipy, Fz)[0] for i in range(len(Sx))]
+            forces.append(Function(Sx, Fx, 'Slip longitudinal (sx)', 'Força longitudinal (N)', name='Sy={:.3F}'.format(slipy)))
+        forces[0].comparaNPlots(forces[1:], title='Slip Longitudinal TMEasy')
+
+        # Longitudinal slip
+        Sy = np.linspace(-0.5, 0.5, 1001)
+        sx = [0, 0.088, 0.176, 0.264, 0.352, 0.44]
+        forces = []
+        for slipx in sx:
+            Fy = [self.get_tire_forces(slipx, Sy[i], Fz)[1] for i in range(len(Sy))]
+            forces.append(Function(Sy, Fy, 'Slip Lateral (sy)', 'Força Lateral (N)', name='Sx={:.3F}'.format(slipx)))
+        forces[0].comparaNPlots(forces[1:], title='Slip Lateral TMEasy')
+
+        # Longitudinal slip
+        Sy = np.linspace(-0.5, 0.5, 1001)
+        sx = [0, 0.088, 0.176, 0.264, 0.352, 0.44]
+        forces = []
+        for slipx in sx:
+            Mz = [self.get_tire_forces(slipx, Sy[i], Fz)[2] for i in range(len(Sy))]
+            forces.append(Function(Sy, Mz, 'Slip Lateral (sy)', 'Momento restaurador (Nm)', name='Sx={:.3F}'.format(slipx)))
+        forces[0].comparaNPlots(forces[1:], title='Momento restaurador TMEasy')
+
+        # # Heatmap
+        # x = y = np.linspace(-0.5, 0.5, 1001)
+        # [SX, SY] = np.meshgrid(x, y)
+        # FX = np.zeros((len(x), len(y)))
+        # FY = np.zeros((len(x), len(y)))
+        # MZ = np.zeros((len(x), len(y)))
+        # for i in range(len(x)):
+        #     for j in range(len(y)):
+        #         FX[i, j], FY[i, j], MZ[i, j], temp1, temp2 = self.get_tire_forces(SX[i, j], SY[i, j], Fz)
+        
+        # fig_fx = go.Figure(data=[go.Surface(x=SX, y=SY, z=FX)])
+
+        # fig_fx.update_layout(title='Longitudinal force', autosize=False,
+        #                 width=500, height=500,
+        #                 margin=dict(l=65, r=50, b=65, t=90))
+
+        # fig_fx.show()
+
+        # fig_fy = go.Figure(data=[go.Surface(x=SX, y=SY, z=FY)])
+
+        # fig_fy.update_layout(title='Lateral force', autosize=False,
+        #                 width=500, height=500,
+        #                 margin=dict(l=65, r=50, b=65, t=90))
+
+        # fig_fy.show()
