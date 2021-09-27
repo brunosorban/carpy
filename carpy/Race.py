@@ -2,7 +2,6 @@ from datetime import time
 import numpy as np
 from Function import Function
 from scipy import integrate
-from pytictoc import TicToc
 
 # For the animation class
 import sys, pygame
@@ -25,7 +24,6 @@ class Race:
         self.atol = atol
         self.rtol = rtol
         self.maxStep = maxStep
-        self.timer = TicToc()
         self.time_count = 0
         self.solver()
     
@@ -48,13 +46,11 @@ class Race:
         # Get tire weight distribution
         Fz_1, Fz_2, Fz_3, Fz_4 = self.Vehicle.get_vertical_load(self.last_avy)
 
-        # self.timer.tic()
         # Calculate tire forces
         ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, omega1, Fz_1)
         ftx_2, fty_2, Mz_2, sx_2, sy_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, omega2, Fz_2)
         ftx_3, fty_3, Mz_3, sx_3, sy_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, omega3, Fz_3)
         ftx_4, fty_4, Mz_4, sx_4, sy_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, omega4, Fz_4)
-        # self.time_count += self.timer.tocvalue()
 
         # Get rolling resistance torques
         Trr1 = self.Vehicle.Tire.get_rolling_resistance(omega1, Fz_1)
@@ -184,7 +180,7 @@ class Race:
         self.last_avy = 0
 
         # Create the solver
-        solver = integrate.RK23(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
+        solver = integrate.RK45(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
         
         # Iterate until max_time is reached
         while solver.status != 'finished':
