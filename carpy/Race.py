@@ -19,72 +19,94 @@ class Race:
         self.Vehicle = Vehicle
         self.Driver = Driver
         self.maxTime = maxTime
-        self.initialSolution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] if initialSolution is None else initialSolution
+        self.initialSolution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] if initialSolution is None else initialSolution
         self.t0 = 0
         self.atol = atol
         self.rtol = rtol
         self.maxStep = maxStep
         self.time_count = 0
         self.solver()
+
+    def rotation_matrix(self, phi, theta, psi):
+        c11 = np.cos(theta) * np.cos(psi)
+        c12 = np.cos(theta) * np.sin(psi)
+        c13 = -np.sin(theta)
+        c21 = np.sin(phi) * np.sin(theta) * np.cos(psi) - np.cos(phi) * np.sin(psi)
+        c22 = np.sin(phi) * np.sin(theta) * np.sin(psi) + np.cos(phi) * np.cos(psi)
+        c23 = np.sin(phi) * np.cos(theta)
+        c31 = np.cos(phi) * np.sin(theta) * np.cos(psi) + np.sin(phi) * np.sin(psi)
+        c32 = np.cos(phi) * np.sin(theta) * np.sin(psi) - np.sin(phi) * np.cos(psi)
+        c33 = np.cos(phi) * np.cos(theta)
+        return np.array([[c11, c12, c13], [c21, c22, c23], [c31, c32, c33]])
     
     def uDot(self, t, sol, post_process=False):
         '''Calculate the state space derivatives'''
         # Retrieve integration data
-        x, y, vx, vy, phi, phi_dot, psi, psi_dot, omega1, omega2, omega3, omega4 = sol
+        x, y, z, vx, vy, vz, phi, theta, psi, phi_dot, theta_dot, psi_dot, omega1, omega2, omega3, omega4 = sol
+
+        # Mount rotation matrix
+        C = self.rotation_matrix(phi, theta, psi)
 
         # Get velocities in vehicle coordinate system
-        vvx = vx * np.cos(psi) + vy * np.sin(psi)
-        vvy = -vx * np.sin(psi) + vy * np.cos(psi)
-        v = np.sqrt(vx**2 + vy**2)
+        [vvx, vvy, vvz] = C @ [vx, vy, vz]
+        v = np.sqrt(vvx**2 + vvy**2 + vvz**2)
 
         # Get control variables
-        T1, T2, T3, T4 = self.Driver.get_torque(v)
+        T1, T2, T3, T4 = self.Driver.get_torque(vvx)
         delta_sw = self.Driver.get_steering(t) # Get driver steering wheel angle
         delta_1, delta_2, delta_3, delta_4 = self.Vehicle.get_steer_wbw(delta_sw) # Get steering angle wheel-by-wheel
         # print(delta_1, delta_2, delta_3, delta_4)
 
         # Get tire weight distribution
-        Fz_1, Fz_2, Fz_3, Fz_4 = self.Vehicle.get_vertical_load(self.last_avy)
+        ftz_1, ftz_2, ftz_3, ftz_4 = self.Vehicle.get_vertical_load(phi, theta, phi_dot, theta_dot)
 
         # Calculate tire forces
-        ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, omega1, Fz_1)
-        ftx_2, fty_2, Mz_2, sx_2, sy_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, omega2, Fz_2)
-        ftx_3, fty_3, Mz_3, sx_3, sy_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, omega3, Fz_3)
-        ftx_4, fty_4, Mz_4, sx_4, sy_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, omega4, Fz_4)
+        ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, omega1, ftz_1)
+        ftx_2, fty_2, Mz_2, sx_2, sy_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, omega2, ftz_2)
+        ftx_3, fty_3, Mz_3, sx_3, sy_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, omega3, ftz_3)
+        ftx_4, fty_4, Mz_4, sx_4, sy_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, omega4, ftz_4)
 
         # Get rolling resistance torques
-        Trr1 = self.Vehicle.Tire.get_rolling_resistance(omega1, Fz_1)
-        Trr2 = self.Vehicle.Tire.get_rolling_resistance(omega2, Fz_2)
-        Trr3 = self.Vehicle.Tire.get_rolling_resistance(omega3, Fz_3)
-        Trr4 = self.Vehicle.Tire.get_rolling_resistance(omega4, Fz_4)
+        Trr1 = self.Vehicle.Tire.get_rolling_resistance(omega1, ftz_1)
+        Trr2 = self.Vehicle.Tire.get_rolling_resistance(omega2, ftz_2)
+        Trr3 = self.Vehicle.Tire.get_rolling_resistance(omega3, ftz_3)
+        Trr4 = self.Vehicle.Tire.get_rolling_resistance(omega4, ftz_4)
 
         # Convert tire forces to vehicle coordinate system
-        fvx_1 = ftx_1 * np.cos(delta_1) - fty_1 * np.sin(delta_1) 
-        fvy_1 = ftx_1 * np.sin(delta_1) + fty_1 * np.cos(delta_1)
+        [fvx_1, fvy_1, fvz_1] = np.transpose(self.rotation_matrix(phi, theta, delta_1)) @ np.array([ftx_1, fty_1, ftz_1])
+        [fvx_2, fvy_2, fvz_2] = np.transpose(self.rotation_matrix(phi, theta, delta_2)) @ np.array([ftx_2, fty_2, ftz_2])
+        [fvx_3, fvy_3, fvz_3] = np.transpose(self.rotation_matrix(phi, theta, delta_3)) @ np.array([ftx_3, fty_3, ftz_3])
+        [fvx_4, fvy_4, fvz_4] = np.transpose(self.rotation_matrix(phi, theta, delta_4)) @ np.array([ftx_4, fty_4, ftz_4])
 
-        fvx_2 = ftx_2 * np.cos(delta_2) - fty_2 * np.sin(delta_2)
-        fvy_2 = ftx_2 * np.sin(delta_2) + fty_2 * np.cos(delta_2)
-
-        fvx_3 = ftx_3 * np.cos(delta_3) - fty_3 * np.sin(delta_3) 
-        fvy_3 = ftx_3 * np.sin(delta_3) + fty_3 * np.cos(delta_3)
-
-        fvx_4 = ftx_4 * np.cos(delta_4) - fty_4 * np.sin(delta_4)
-        fvy_4 = ftx_4 * np.sin(delta_4) + fty_4 * np.cos(delta_4)
+        # Convert tire moments to vehicle coordinate system
+        [mvx_1, mvy_1, mvz_1] = np.transpose(self.rotation_matrix(phi, theta, delta_1)) @ np.array([0, 0, Mz_1])
+        [mvx_2, mvy_2, mvz_2] = np.transpose(self.rotation_matrix(phi, theta, delta_2)) @ np.array([0, 0, Mz_2])
+        [mvx_3, mvy_3, mvz_3] = np.transpose(self.rotation_matrix(phi, theta, delta_3)) @ np.array([0, 0, Mz_3])
+        [mvx_4, mvy_4, mvz_4] = np.transpose(self.rotation_matrix(phi, theta, delta_4)) @ np.array([0, 0, Mz_4])
 
         # Calculate drag force
-        Fd = -1 / 2 * self.Vehicle.rho * self.Vehicle.cd * vvx**2 * self.Vehicle.af * np.sign(vvx)
+        Fd = 1 / 2 * self.Vehicle.rho * self.Vehicle.cd * vvx**2 * self.Vehicle.af * np.sign(vvx)
 
         # Calculate accelerations in vehivle coordinate system
-        avx = (fvx_1 + fvx_2 + fvx_3 + fvx_4 + Fd) / self.Vehicle.vehicle_equivalent_mass
-        avy = (fvy_1 + fvy_2 + fvy_3 + fvy_4) / self.Vehicle.vehicle_equivalent_mass
-        self.last_avy = avy
+        avx = (fvx_1 + fvx_2 + fvx_3 + fvx_4 - Fd) / self.Vehicle.vehicle_equivalent_mass
+        avy = (fvy_1 + fvy_2 + fvy_3 + fvy_4) / self.Vehicle.vehicle_mass
+        avz = (fvz_1 + fvz_2 + fvz_3 + fvz_4) / self.Vehicle.vehicle_mass
 
         # Calculete state space accelerations
-        ax = avx * np.cos(psi) - avy * np.sin(psi)
-        ay = avx * np.sin(psi) + avy * np.cos(psi)
-        tau_z = (fvy_1 + fvy_2) * self.Vehicle.lf - (fvy_3 + fvy_4) * self.Vehicle.lr + (fvx_2 - fvx_1) * self.Vehicle.wf / 2 + (fvx_4 - fvx_3) * self.Vehicle.wr / 2
-        psi_dot_dot = tau_z / self.Vehicle.Izz
-        phi_dot_dot = (self.Vehicle.vehicle_mass * self.Vehicle.h * (avy + 9.81  * phi) - (self.Vehicle.K_phif + self.Vehicle.K_phir) * phi - (self.Vehicle.C_phif + self.Vehicle.C_phir) * phi_dot) / (self.Vehicle.Ixx + self.Vehicle.vehicle_mass * self.Vehicle.h**2)
+        [ax, ay, az] = np.transpose(C) @ [avx, avy, avz] + np.array([0, 0, -9.81])
+
+        # phi angular acceleration
+        tau_x = (fvz_1 - fvz_2) * self.Vehicle.wf / 2 + (fvx_3 - fvx_4) * self.Vehicle.wr / 2 + (fvy_1 + fvy_2 + fvy_3 + fvy_4) * self.Vehicle.CG_height + mvx_1 + mvx_2 + mvx_3 + mvx_4
+        phi_dot_dot = (tau_x + (self.Vehicle.Iyy - self.Vehicle.Izz) * (psi_dot * theta_dot)) / self.Vehicle.Ixx 
+        
+        # theta angular acceleration
+        tau_y = -(fvz_1 + fvz_2) * self.Vehicle.lf + (fvz_3 + fvz_4) * self.Vehicle.lr - (fvx_1 + fvx_2 + fvx_3 + fvx_4) * self.Vehicle.CG_height + mvy_1 + mvy_2 + mvy_3 + mvy_4
+        theta_dot_dot = (tau_y + (self.Vehicle.Izz - self.Vehicle.Ixx) * (psi_dot * phi_dot)) / self.Vehicle.Iyy
+
+        # psi angular acceleraion
+        tau_z = (fvy_1 + fvy_2) * self.Vehicle.lf - (fvy_3 + fvy_4) * self.Vehicle.lr + (fvx_2 - fvx_1) * self.Vehicle.wf / 2 + (fvx_4 - fvx_3) * self.Vehicle.wr / 2 + mvz_1 + mvz_2 + mvz_3 + mvz_4
+        psi_dot_dot = (tau_z + (self.Vehicle.Ixx - self.Vehicle.Iyy) * (phi_dot * theta_dot)) / self.Vehicle.Izz
+        
 
         # Calculate accelerations in the wheels
         # Deveria aqui ser considerado o raio dinâmico?
@@ -97,11 +119,15 @@ class Race:
             uDot = [
                 vx,
                 vy,
+                vz,
                 ax,
                 ay,
+                az,
                 phi_dot,
-                phi_dot_dot,
+                theta_dot,
                 psi_dot,
+                phi_dot_dot,
+                theta_dot_dot,
                 psi_dot_dot,
                 omega1_dot,
                 omega2_dot,
@@ -143,10 +169,10 @@ class Race:
             self.sy_4.append(sy_4)
             self.Trr.append(Trr1 + Trr2 + Trr3 + Trr4)
             self.Fd.append(Fd)
-            self.Fz_1.append(Fz_1)
-            self.Fz_2.append(Fz_2)
-            self.Fz_3.append(Fz_3)
-            self.Fz_4.append(Fz_4)
+            self.fz_1.append(ftz_1)
+            self.fz_2.append(ftz_2)
+            self.fz_3.append(ftz_3)
+            self.fz_4.append(ftz_4)
 
             self.x.append(x)
             self.y.append(y)
@@ -161,6 +187,9 @@ class Race:
             self.phi.append(phi)
             self.phi_dot.append(phi_dot)
             self.phi_dot_dot.append(phi_dot_dot)
+            self.theta.append(theta)
+            self.theta_dot.append(theta_dot)
+            self.theta_dot_dot.append(theta_dot_dot)
             self.psi.append(psi)
             self.psi_dot.append(psi_dot)
             self.psi_dot_dot.append(psi_dot_dot)
@@ -180,7 +209,7 @@ class Race:
         self.last_avy = 0
 
         # Create the solver
-        solver = integrate.RK23(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
+        solver = integrate.LSODA(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
         
         # Iterate until max_time is reached
         while solver.status != 'finished':
@@ -222,10 +251,10 @@ class Race:
         self.sy_4 = [0]
         self.Trr = [0]
         self.Fd = [0]
-        self.Fz_1 = [0]
-        self.Fz_2 = [0]
-        self.Fz_3 = [0]
-        self.Fz_4 = [0]
+        self.fz_1 = [0]
+        self.fz_2 = [0]
+        self.fz_3 = [0]
+        self.fz_4 = [0]
 
         self.x = [0]
         self.y = [0]
@@ -240,6 +269,9 @@ class Race:
         self.phi = [0]
         self.phi_dot = [0]
         self.phi_dot_dot = [0]
+        self.theta = [0]
+        self.theta_dot = [0]
+        self.theta_dot_dot = [0]
         self.psi = [0]
         self.psi_dot = [0]
         self.psi_dot_dot = [0]
@@ -288,10 +320,10 @@ class Race:
         self.sy_4 = Function(self.time, self.sy_4, xlabel='Time (s)', ylabel='Lateral slip', name='sy_4')
         self.Trr = Function(self.time, self.Trr, xlabel='Time (s)', ylabel='Total roling resistance (Nm)', name='Trr')
         self.Fd = Function(self.time, self.Fd, xlabel='Time (s)', ylabel='Drag force (N)', name='Fd')
-        self.Fz_1 = Function(self.time, self.Fz_1, xlabel='Time (s)', ylabel='Front left tire vertical force (N)', name='Fz_1')
-        self.Fz_2 = Function(self.time, self.Fz_2, xlabel='Time (s)', ylabel='Front right tire vertical force (N)', name='Fz_2')
-        self.Fz_3 = Function(self.time, self.Fz_3, xlabel='Time (s)', ylabel='Rear left tire vertical force (N)', name='Fz_3')
-        self.Fz_4 = Function(self.time, self.Fz_4, xlabel='Time (s)', ylabel='Rear right tire vertical force (N)', name='Fz_4')
+        self.fz_1 = Function(self.time, self.fz_1, xlabel='Time (s)', ylabel='Front left tire vertical force (N)', name='fz_1')
+        self.fz_2 = Function(self.time, self.fz_2, xlabel='Time (s)', ylabel='Front right tire vertical force (N)', name='fz_2')
+        self.fz_3 = Function(self.time, self.fz_3, xlabel='Time (s)', ylabel='Rear left tire vertical force (N)', name='fz_3')
+        self.fz_4 = Function(self.time, self.fz_4, xlabel='Time (s)', ylabel='Rear right tire vertical force (N)', name='fz_4')
 
         self.r = Function(self.time, np.sqrt(np.array(self.x)**2 + np.array(self.y)**2), xlabel='Time (s)', ylabel='Distance from the origin (m)', name='r')
         self.v = Function(self.time, np.sqrt(np.array(self.vx)**2 + np.array(self.vy)**2), xlabel='Time (s)', ylabel='Velocity (m/s)', name='v')
@@ -309,6 +341,9 @@ class Race:
         self.phi = Function(self.time,  180 / np.pi * np.array(self.phi), xlabel='Time (s)', ylabel='Roll angle (degrees)', name='phi')
         self.phi_dot = Function(self.time, self.phi_dot, xlabel='Time (s)', ylabel='Roll angular velocity (rad/s)', name='phi_dot')
         self.phi_dot_dot = Function(self.time, self.phi_dot_dot, xlabel='Time (s)', ylabel='Roll angular acceleration (rad/s²)', name='phi_dot_dot')
+        self.theta = Function(self.time,  180 / np.pi * np.array(self.theta), xlabel='Time (s)', ylabel='Pitch angle (degrees)', name='theta')
+        self.theta_dot = Function(self.time, self.theta_dot, xlabel='Time (s)', ylabel='Pitch angular velocity (rad/s)', name='theta_dot')
+        self.theta_dot_dot = Function(self.time, self.theta_dot_dot, xlabel='Time (s)', ylabel='Pitch angular acceleration (rad/s²)', name='theta_dot_dot')
         self.psi = Function(self.time,  180 / np.pi * np.array(self.psi), xlabel='Time (s)', ylabel='Yaw angle (degrees)', name='psi')
         self.psi_dot = Function(self.time, self.psi_dot, xlabel='Time (s)', ylabel='Yaw angular velocity (rad/s)', name='psi_dot')
         self.psi_dot_dot = Function(self.time, self.psi_dot_dot, xlabel='Time (s)', ylabel='Yaw angular acceleration (rad/s²)', name='psi_dot_dot')
@@ -388,6 +423,6 @@ class Race:
             self.blitRotateCenter(screen, car, position, self.psi(timeCount))
             pygame.display.flip()
 
-            timeCount += 1e-1
+            timeCount += 3e-2
             # last_position = position
         pygame.display.quit()

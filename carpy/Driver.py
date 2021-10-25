@@ -82,7 +82,7 @@ class Driver:
         if sim_time <= 20: return 0
         else: return 7 * np.pi / 180
     
-    def Scurve(self, sim_time, angle=10):
+    def Scurve(self, sim_time, angle=3):
         if sim_time <= 30: return 0
         elif 30 < sim_time <= 50: return (angle *  np.pi / 180) * np.sin((sim_time - 30) * 2 * np.pi / 20)
         else: return 0

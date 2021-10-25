@@ -2,7 +2,7 @@ import numpy as np
 from Function import Function
 
 class Vehicle:
-    def __init__(self, Tire, vehicle_mass, Ixx, Izz, lf, lr, wf, wr, af, cd, CG_height, rho=1.225):
+    def __init__(self, Tire, vehicle_mass, Ixx, Iyy, Izz, lf, lr, wf, wr, af, cd, CG_height, rho=1.225):
         self.Tire = Tire
         self.n_tires = 4
         self.vehicle_mass = vehicle_mass
@@ -17,7 +17,7 @@ class Vehicle:
         self.CG_height = CG_height
         self.h = CG_height - Tire.tire_radius
         self.Ixx = Ixx
-        # self.Iyy = Iyy
+        self.Iyy = Iyy
         self.Izz = Izz
         self.K_arf = 0
         self.K_arr = 0
@@ -29,12 +29,6 @@ class Vehicle:
         self.K_sr = K_sr
         self.C_sf = C_sf
         self.C_sr = C_sr
-        self.K_phif = self.K_sf * self.lf**2 / 2 + self.K_arf
-        self.K_phir = self.K_sr * self.lr**2 / 2 + self.K_arr
-        self.C_phif = self.C_sf * self.lf**2 / 2
-        self.C_phir = self.C_sr * self.lr**2 / 2
-        self.dff = self.vehicle_mass * self.h * self.K_phif / (self.lf * (self.K_phif + self.K_phir - self.vehicle_mass * 9.81 * self.h))
-        self.dfr = self.vehicle_mass * self.h * self.K_phir / (self.lr * (self.K_phif + self.K_phir - self.vehicle_mass * 9.81 * self.h))
 
     def set_anti_roll_bar(self, d, a, b, G, position):
         K_ar = G * (np.pi * d**4 / 32) * b / a**2
@@ -43,16 +37,17 @@ class Vehicle:
         else: return print('Please insert a valid position. Position must be "f" or "r"')
         return self.set_suspension(self.K_sf, self.K_sr, self.C_sf, self.C_sr)
 
-    def get_vertical_load(self, ay):
+    def get_vertical_load(self, phi, theta, phi_dot, theta_dot):
         F10 = F20 = self.Ff0
         F30 = F40 = self.Fr0
-        F1 = F10 - self.dff * ay
-        F2 = F20 + self.dff * ay
-        F3 = F30 - self.dfr * ay
-        F4 = F40 + self.dfr * ay
+        F1 = F10 + self.K_sf * (-self.wf * np.sin(phi) + self.lf * np.sin(theta)) + self.C_sf * (-self.wf * np.sin(phi_dot) + self.lf * np.sin(theta_dot))
+        F2 = F20 + self.K_sf * (self.wf * np.sin(phi) + self.lf * np.sin(theta)) + self.C_sf * (self.wf * np.sin(phi_dot) + self.lf * np.sin(theta_dot))
+        F3 = F30 + self.K_sf * (-self.wf * np.sin(phi) - self.lf * np.sin(theta)) + self.C_sf * (-self.wf * np.sin(phi_dot) - self.lf * np.sin(theta_dot))
+        F4 = F40 + self.K_sf * (self.wf * np.sin(phi) - self.lf * np.sin(theta)) + self.C_sf * (self.wf * np.sin(phi_dot) - self.lf * np.sin(theta_dot))
         return F1, F2, F3, F4
 
     def get_steer_wbw(self, delta_sw):
+        # return the ackerman geometry wheel by wheel
         if delta_sw == 0: 
             return 0, 0, 0, 0
         else:
