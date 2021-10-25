@@ -180,7 +180,7 @@ class Race:
         self.last_avy = 0
 
         # Create the solver
-        solver = integrate.RK45(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
+        solver = integrate.RK23(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
         
         # Iterate until max_time is reached
         while solver.status != 'finished':

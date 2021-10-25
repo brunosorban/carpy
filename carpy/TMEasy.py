@@ -1,6 +1,5 @@
 import numpy as np
 from Function import Function
-import plotly.graph_objects as go
 
 ''' Here lies an inplementation of TMEasy tire model from George Rill and Abel
 Castro. The implmentation is based on the Matlab code presented at Road Vehicle 
@@ -35,7 +34,6 @@ class Tire:
         Sx, Sy = self.calculateSlip(*args)
         return self.get_tire_forces(Sx, Sy, args[4])
         
-    
     def __tire_offset__(self, Sy):
         Sy = abs(Sy) # absolute value because n(ny) = n(-Sy)
         if Sy < self.SyE: # 4th - order polynomial 0 <= Sy < SyE
