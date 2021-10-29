@@ -71,7 +71,7 @@ class Driver:
         K = 1000
         Vref = 300
         dV = Vref - V
-        return K * dV if  K * dV < 500 else 500
+        return K * dV if  K * dV < 700 else 700
 
     def steering(self, sim_time):
         if sim_time <= 30: return 0

@@ -21,8 +21,8 @@ class Vehicle:
         self.Izz = Izz
         self.K_arf = 0
         self.K_arr = 0
-        self.Ff0 = self.lr / (self.lf + self.lr) * self.vehicle_mass * 9.81
-        self.Fr0 = self.lf / (self.lf + self.lr) * self.vehicle_mass * 9.81
+        self.Ff0 = self.lr / (2 * (self.lf + self.lr) ) * self.vehicle_mass * 9.81
+        self.Fr0 = self.lf / (2 * (self.lf + self.lr) ) * self.vehicle_mass * 9.81
 
     def set_suspension(self, K_sf, K_sr, C_sf, C_sr):
         self.K_sf = K_sf
@@ -37,13 +37,18 @@ class Vehicle:
         else: return print('Please insert a valid position. Position must be "f" or "r"')
         return self.set_suspension(self.K_sf, self.K_sr, self.C_sf, self.C_sr)
 
-    def get_vertical_load(self, phi, theta, phi_dot, theta_dot):
+    def get_vertical_load(self, z, vz, phi, theta, phi_dot, theta_dot):
         F10 = F20 = self.Ff0
         F30 = F40 = self.Fr0
-        F1 = F10 + self.K_sf * (-self.wf * np.sin(phi) + self.lf * np.sin(theta)) + self.C_sf * (-self.wf * np.sin(phi_dot) + self.lf * np.sin(theta_dot))
-        F2 = F20 + self.K_sf * (self.wf * np.sin(phi) + self.lf * np.sin(theta)) + self.C_sf * (self.wf * np.sin(phi_dot) + self.lf * np.sin(theta_dot))
-        F3 = F30 + self.K_sf * (-self.wf * np.sin(phi) - self.lf * np.sin(theta)) + self.C_sf * (-self.wf * np.sin(phi_dot) - self.lf * np.sin(theta_dot))
-        F4 = F40 + self.K_sf * (self.wf * np.sin(phi) - self.lf * np.sin(theta)) + self.C_sf * (self.wf * np.sin(phi_dot) - self.lf * np.sin(theta_dot))
+        sphi = np.sin(phi)
+        stheta = np.sin(theta)
+        sphidot = np.sin(phi_dot)
+        sthetadot = np.sin(theta_dot)
+
+        F1 = F10 + self.K_sf * (-z - self.wf/2 * sphi + self.lf * stheta) + self.C_sf * (-vz - self.wf/2 * sphidot + self.lf * sthetadot)
+        F2 = F20 + self.K_sf * (-z + self.wf/2 * sphi + self.lf * stheta) + self.C_sf * (-vz + self.wf/2 * sphidot + self.lf * sthetadot)
+        F3 = F30 + self.K_sr * (-z - self.wr/2 * sphi - self.lr * stheta) + self.C_sr * (-vz - self.wr/2 * sphidot - self.lr * sthetadot)
+        F4 = F40 + self.K_sr * (-z + self.wr/2 * sphi - self.lr * stheta) + self.C_sr * (-vz + self.wr/2 * sphidot - self.lr * sthetadot)
         return F1, F2, F3, F4
 
     def get_steer_wbw(self, delta_sw):
