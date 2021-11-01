@@ -416,7 +416,7 @@ class Race:
         car = pygame.transform.scale(car, (128, 128))
 
         car_side = pygame.image.load('../Animation/Car side.png')
-        car_side = pygame.transform.scale(car_side, (int(128 * car_side.get_width() / car_side.get_height()), 128))
+        car_side = pygame.transform.scale(car_side, (int(65 * car_side.get_width() / car_side.get_height()), 65))
 
         car_front = pygame.image.load('../Animation/Car front.png')
         car_front = pygame.transform.scale(car_front, (128, 128))
@@ -424,7 +424,7 @@ class Race:
         # Initialize position vectors
         initial_position = np.array([0, size[1]-128])
         position = initial_position
-        position_side = np.array([0, 128])
+        position_side = np.array([0, 128+52])
         position_front = np.array([0, 270])
         # last_position = position
         timeCount = 0
