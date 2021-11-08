@@ -1,10 +1,10 @@
-from datetime import time
 import numpy as np
 from Function import Function
 from scipy import integrate
 
 # For the animation class
 import sys, pygame
+import imageio # Gif da animação
 
 class Race:
     def __init__(self, 
@@ -390,7 +390,7 @@ class Race:
                 y_factor = x_factor
         return np.array([(x + abs(xlim_inf)) * x_factor, (y - abs(ylim_inf)) * y_factor])
 
-    def animate(self, timeMax):
+    def animate(self, timeMax, save=False):
         # Initialization
         xlim_inf = abs(min(self.x.__Y_source__))
         xlim = max(self.x.__Y_source__) + 1e-3 + xlim_inf
@@ -399,6 +399,7 @@ class Race:
         pygame.init()
         pygame.display.init()
         font = pygame.font.SysFont('Helvetica', 32)
+        if save: w = imageio.get_writer('Videos/carpy.mp4', format='FFMPEG', fps=60)
 
         # Defining auxiliar colors 
         # white = 0, 0, 0
@@ -458,5 +459,8 @@ class Race:
             pygame.display.flip()
 
             timeCount += 3e-2
-            # last_position = position
+            if save:
+                pygame.image.save(screen, 'Videos/temp.jpg')
+                w.append_data(imageio.imread('Videos/temp.jpg'))
         pygame.display.quit()
+        if save: w.close()
