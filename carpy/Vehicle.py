@@ -31,11 +31,11 @@ class Vehicle:
         self.C_sr = C_sr
 
     def set_anti_roll_bar(self, d, a, b, G, position):
-        K_ar = G * (np.pi * d**4 / 32) * b / a**2
-        if position == 'f': self.K_arf = K_ar
-        elif position == 'r': self.K_arr = K_ar
+        K_arz = G * (np.pi * d**4 / 32) * b / a**2
+        if position == 'f': self.K_sf += K_arz
+        elif position == 'r': self.K_sr += K_arz
         else: return print('Please insert a valid position. Position must be "f" or "r"')
-        return self.set_suspension(self.K_sf, self.K_sr, self.C_sf, self.C_sr)
+        return None
 
     def get_vertical_load(self, z, vz, phi, theta, phi_dot, theta_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, zc1, zc2, zc3, zc4, vzc1, vzc2, vzc3, vzc4):
         # Retrieve suspension properties
