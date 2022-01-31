@@ -6,8 +6,9 @@ Castro. The implmentation is based on the Matlab code presented at Road Vehicle
 Dynamics, second edition.'''
 
 class Tire:
-    def __init__(self, radius, Jzz, cz, dfx0, dfy0, Fxm, Fym, Sxm, Sym, Fxs, Fys, Sxs, Sys, Sy0, SyE, lamb, n2L0, frr):
+    def __init__(self, radius, mass, Jzz, cz, dfx0, dfy0, Fxm, Fym, Sxm, Sym, Fxs, Fys, Sxs, Sys, Sy0, SyE, lamb, n2L0, frr):
         self.tire_radius = radius
+        self.mass = mass
         self.Jzz = Jzz
         self.cz = cz
         self.dfx0 = dfx0

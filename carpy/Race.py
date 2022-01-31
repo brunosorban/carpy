@@ -1,6 +1,8 @@
+import re
 import numpy as np
 from Function import Function
 from scipy import integrate
+import matplotlib.pyplot as plt
 
 # For the animation class
 import sys, pygame
@@ -9,7 +11,8 @@ import imageio # Gif da animação
 class Race:
     def __init__(self, 
         Vehicle, 
-        Driver, 
+        Driver,
+        Track, 
         initialSolution=None, 
         maxTime=60, 
         rtol=1e-6, 
@@ -18,8 +21,9 @@ class Race:
     ):
         self.Vehicle = Vehicle
         self.Driver = Driver
+        self.Track = Track
         self.maxTime = maxTime
-        self.initialSolution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] if initialSolution is None else initialSolution
+        self.initialSolution = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] if initialSolution is None else initialSolution
         self.t0 = 0
         self.atol = atol
         self.rtol = rtol
@@ -42,7 +46,7 @@ class Race:
     def uDot(self, t, sol, post_process=False):
         '''Calculate the state space derivatives'''
         # Retrieve integration data
-        x, y, z, vx, vy, vz, phi, theta, psi, phi_dot, theta_dot, psi_dot, omega1, omega2, omega3, omega4 = sol
+        x, y, z, vx, vy, vz, phi, theta, psi, phi_dot, theta_dot, psi_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, omega1, omega2, omega3, omega4 = sol
 
         # Mount rotation matrix
         C = self.rotation_matrix(phi, theta, psi)
@@ -52,6 +56,23 @@ class Race:
         g = C @ np.array([0, 0, -9.81])
         # v = np.sqrt(vvx**2 + vvy**2 + vvz**2)
 
+        # Get track variables; A base rotation is applied to consider distance from CG to each wheel
+        Ct = self.rotation_matrix(0, 0, psi)
+        [xc1, yc1, zc1] = np.transpose(Ct) @ [self.Vehicle.lf, self.Vehicle.wf, 0] + [x, y, 0]
+        [xc2, yc2, zc2] = np.transpose(Ct) @ [self.Vehicle.lf, -self.Vehicle.wf, 0] + [x, y, 0]
+        [xc3, yc3, zc2] = np.transpose(Ct) @ [-self.Vehicle.lr, self.Vehicle.wr, 0] + [x, y, 0]
+        [xc4, yc4, zc2] = np.transpose(Ct) @ [-self.Vehicle.lr, -self.Vehicle.wr, 0] + [x, y, 0]
+        
+        zc1 = self.Track.get_track_height(xc1, yc1)
+        zc2 = self.Track.get_track_height(xc2, yc2)
+        zc3 = self.Track.get_track_height(xc3, yc3)
+        zc4 = self.Track.get_track_height(xc4, yc4)
+
+        # vzc1 = self.Track.get_track_speed(xc1, yc1, vx, vy)
+        # vzc2 = self.Track.get_track_speed(xc2, yc2, vx, vy)
+        # vzc3 = self.Track.get_track_speed(xc3, yc3, vx, vy)
+        # vzc4 = self.Track.get_track_speed(xc4, yc4, vx, vy)
+        
         # Get control variables
         T1, T2, T3, T4 = self.Driver.get_torque(vvx)
         delta_sw = self.Driver.get_steering(t) # Get driver steering wheel angle
@@ -59,7 +80,7 @@ class Race:
         # print(delta_1, delta_2, delta_3, delta_4)
 
         # Get tire weight distribution
-        ftz_1, ftz_2, ftz_3, ftz_4 = self.Vehicle.get_vertical_load(z, vvz, phi, theta, phi_dot, theta_dot)
+        ftz_1, ftz_2, ftz_3, ftz_4, fs_1, fs_2, fs_3, fs_4 = self.Vehicle.get_vertical_load(z, vvz, phi, theta, phi_dot, theta_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, zc1, zc2, zc3, zc4, vz1, vz2, vz3, vz4)
 
         # Calculate tire forces
         ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, omega1, ftz_1)
@@ -74,10 +95,10 @@ class Race:
         Trr4 = self.Vehicle.Tire.get_rolling_resistance(omega4, ftz_4)
 
         # Convert tire forces to vehicle coordinate system
-        [fvx_1, fvy_1, fvz_1] = np.transpose(self.rotation_matrix(phi, theta, delta_1)) @ np.array([ftx_1, fty_1, ftz_1])
-        [fvx_2, fvy_2, fvz_2] = np.transpose(self.rotation_matrix(phi, theta, delta_2)) @ np.array([ftx_2, fty_2, ftz_2])
-        [fvx_3, fvy_3, fvz_3] = np.transpose(self.rotation_matrix(phi, theta, delta_3)) @ np.array([ftx_3, fty_3, ftz_3])
-        [fvx_4, fvy_4, fvz_4] = np.transpose(self.rotation_matrix(phi, theta, delta_4)) @ np.array([ftx_4, fty_4, ftz_4])
+        [fvx_1, fvy_1, fvz_1] = np.transpose(self.rotation_matrix(phi, theta, delta_1)) @ np.array([ftx_1, fty_1, fs_1])
+        [fvx_2, fvy_2, fvz_2] = np.transpose(self.rotation_matrix(phi, theta, delta_2)) @ np.array([ftx_2, fty_2, fs_2])
+        [fvx_3, fvy_3, fvz_3] = np.transpose(self.rotation_matrix(phi, theta, delta_3)) @ np.array([ftx_3, fty_3, fs_3])
+        [fvx_4, fvy_4, fvz_4] = np.transpose(self.rotation_matrix(phi, theta, delta_4)) @ np.array([ftx_4, fty_4, fs_4])
 
         # Convert tire moments to vehicle coordinate system
         [mvx_1, mvy_1, mvz_1] = np.transpose(self.rotation_matrix(phi, theta, delta_1)) @ np.array([0, 0, Mz_1])
@@ -95,6 +116,12 @@ class Race:
 
         # Calculete state space accelerations
         [ax, ay, az] = np.transpose(C) @ [avx, avy, avz]
+        
+        # Calculate tires vertical acceleration
+        az1 = (ftz_1 - fs_1) / self.Vehicle.Tire.mass
+        az2 = (ftz_2 - fs_2) / self.Vehicle.Tire.mass
+        az3 = (ftz_3 - fs_3) / self.Vehicle.Tire.mass
+        az4 = (ftz_4 - fs_4) / self.Vehicle.Tire.mass
 
         # phi angular acceleration
         tau_x = (fvz_1 - fvz_2) * self.Vehicle.wf / 2 + (fvx_3 - fvx_4) * self.Vehicle.wr / 2 + (fvy_1 + fvy_2 + fvy_3 + fvy_4) * self.Vehicle.CG_height + mvx_1 + mvx_2 + mvx_3 + mvx_4
@@ -130,6 +157,14 @@ class Race:
                 phi_dot_dot,
                 theta_dot_dot,
                 psi_dot_dot,
+                vz1,
+                vz2,
+                vz3,
+                vz4,
+                az1,
+                az2,
+                az3,
+                az4,
                 omega1_dot,
                 omega2_dot,
                 omega3_dot,
@@ -174,6 +209,10 @@ class Race:
             self.ftz_2.append(ftz_2)
             self.ftz_3.append(ftz_3)
             self.ftz_4.append(ftz_4)
+            self.fs_1.append(fs_1)
+            self.fs_2.append(fs_2)
+            self.fs_3.append(fs_3)
+            self.fs_4.append(fs_4)
 
             self.x.append(x)
             self.y.append(y)
@@ -199,6 +238,14 @@ class Race:
             self.psi.append(psi)
             self.psi_dot.append(psi_dot)
             self.psi_dot_dot.append(psi_dot_dot)
+            self.z1.append(z1)
+            self.z2.append(z2)
+            self.z3.append(z3)
+            self.z4.append(z4)
+            self.vz1.append(vz1)
+            self.vz2.append(vz2)
+            self.vz3.append(vz3)
+            self.vz4.append(vz4)
             self.omega1.append(omega1)
             self.omega2.append(omega2)
             self.omega3.append(omega3)
@@ -261,6 +308,10 @@ class Race:
         self.ftz_2 = [0]
         self.ftz_3 = [0]
         self.ftz_4 = [0]
+        self.fs_1 = [0]
+        self.fs_2 = [0]
+        self.fs_3 = [0]
+        self.fs_4 = [0]
 
         self.x = [0]
         self.y = [0]
@@ -286,6 +337,14 @@ class Race:
         self.psi = [0]
         self.psi_dot = [0]
         self.psi_dot_dot = [0]
+        self.z1 = [0]
+        self.z2 = [0]
+        self.z3 = [0]
+        self.z4 = [0]
+        self.vz1 = [0]
+        self.vz2 = [0]
+        self.vz3 = [0]
+        self.vz4 = [0]
         self.omega1 = [0]
         self.omega2 = [0]
         self.omega3 = [0]
@@ -331,10 +390,14 @@ class Race:
         self.sy_4 = Function(self.time, self.sy_4, xlabel='Time (s)', ylabel='Lateral slip', name='sy_4')
         self.Trr = Function(self.time, self.Trr, xlabel='Time (s)', ylabel='Total roling resistance (Nm)', name='Trr')
         self.Fd = Function(self.time, self.Fd, xlabel='Time (s)', ylabel='Drag force (N)', name='Fd')
-        self.ftz_1 = Function(self.time, self.ftz_1, xlabel='Time (s)', ylabel='Front left tire vertical force (N)', name='fz_1')
-        self.ftz_2 = Function(self.time, self.ftz_2, xlabel='Time (s)', ylabel='Front right tire vertical force (N)', name='fz_2')
-        self.ftz_3 = Function(self.time, self.ftz_3, xlabel='Time (s)', ylabel='Rear left tire vertical force (N)', name='fz_3')
-        self.ftz_4 = Function(self.time, self.ftz_4, xlabel='Time (s)', ylabel='Rear right tire vertical force (N)', name='fz_4')
+        self.ftz_1 = Function(self.time, self.ftz_1, xlabel='Time (s)', ylabel='Front left tire vertical force (N)', name='ftz_1')
+        self.ftz_2 = Function(self.time, self.ftz_2, xlabel='Time (s)', ylabel='Front right tire vertical force (N)', name='ftz_2')
+        self.ftz_3 = Function(self.time, self.ftz_3, xlabel='Time (s)', ylabel='Rear left tire vertical force (N)', name='ftz_3')
+        self.ftz_4 = Function(self.time, self.ftz_4, xlabel='Time (s)', ylabel='Rear right tire vertical force (N)', name='ftz_4')
+        self.fs_1 = Function(self.time, self.fs_1, xlabel='Time (s)', ylabel='Front left suspension vertical force (N)', name='fs_1')
+        self.fs_2 = Function(self.time, self.fs_2, xlabel='Time (s)', ylabel='Front right suspension vertical force (N)', name='fs_2')
+        self.fs_3 = Function(self.time, self.fs_3, xlabel='Time (s)', ylabel='Rear left suspension vertical force (N)', name='fs_3')
+        self.fs_4 = Function(self.time, self.fs_4, xlabel='Time (s)', ylabel='Rear right suspension vertical force (N)', name='fs_4')
 
         self.r = Function(self.time, np.sqrt(np.array(self.x)**2 + np.array(self.y)**2), xlabel='Time (s)', ylabel='Distance from the origin (m)', name='r')
         self.v = Function(self.time, np.sqrt(np.array(self.vx)**2 + np.array(self.vy)**2), xlabel='Time (s)', ylabel='Velocity (m/s)', name='v')
@@ -363,6 +426,14 @@ class Race:
         self.psi = Function(self.time,  180 / np.pi * np.array(self.psi), xlabel='Time (s)', ylabel='Yaw angle (degrees)', name='psi')
         self.psi_dot = Function(self.time, self.psi_dot, xlabel='Time (s)', ylabel='Yaw angular velocity (rad/s)', name='psi_dot')
         self.psi_dot_dot = Function(self.time, self.psi_dot_dot, xlabel='Time (s)', ylabel='Yaw angular acceleration (rad/s²)', name='psi_dot_dot')
+        self.z1 = Function(self.time, self.z1, xlabel='Time (s)', ylabel='Tire 1 position in inertial frame z axis (m)', name='z1')
+        self.z2 = Function(self.time, self.z2, xlabel='Time (s)', ylabel='Tire 2 position in inertial frame z axis (m)', name='z2')
+        self.z3 = Function(self.time, self.z3, xlabel='Time (s)', ylabel='Tire 3 position in inertial frame z axis (m)', name='z3')
+        self.z4 = Function(self.time, self.z4, xlabel='Time (s)', ylabel='Tire 4 position in inertial frame z axis (m)', name='z4')
+        self.vz1 = Function(self.time, self.vz1, xlabel='Time (s)', ylabel='Tire 1 velocity in inertial frame z axis (m/s)', name='vz1')
+        self.vz2 = Function(self.time, self.vz2, xlabel='Time (s)', ylabel='Tire 2 velocity in inertial frame z axis (m/s)', name='vz2')
+        self.vz3 = Function(self.time, self.vz3, xlabel='Time (s)', ylabel='Tire 3 velocity in inertial frame z axis (m/s)', name='vz3')
+        self.vz4 = Function(self.time, self.vz4, xlabel='Time (s)', ylabel='Tire 4 velocity in inertial frame z axis (m/s)', name='vz4')
         self.omega1= Function(self.time, self.omega1, xlabel='Time (s)', ylabel='Front Left tire angular velocity (rad/s)', name='ω1')
         self.omega2= Function(self.time, self.omega2, xlabel='Time (s)', ylabel='Front Right tire angular velocity (rad/s)', name='ω2')
         self.omega3 = Function(self.time, self.omega3, xlabel='Time (s)', ylabel='Rear Left tire angular velocity (rad/s)', name='ω3')
@@ -412,6 +483,8 @@ class Race:
         # Preparing images
         background = pygame.image.load('../Animation/TrackT01.png')
         background = (pygame.transform.scale(background, (size)))
+        
+        # background = screen.fill([255, 255, 255])
 
         car = pygame.image.load('../Animation/Car.png')
         car = pygame.transform.scale(car, (128, 128))
@@ -447,6 +520,7 @@ class Race:
 
             # Blit the data into the screen
             screen.blit(background, (0, 0))
+            # screen.fill([211, 211, 211])
             screen.blit(tempo, (5, 0))  
             screen.blit(velocidade, (5, 35))
             screen.blit(pitch, (5, 130)) 
