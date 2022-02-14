@@ -1,3 +1,4 @@
+from math import gamma
 import numpy as np
 from Function import Function
 
@@ -32,8 +33,8 @@ class Tire:
         self.hsyn = Sym / (Sxm + Sym) + Fym / (dfy0 * (Fxm / dfx0 + Fym / dfy0))
 
     def __call__(self, *args):
-        Sx, Sy = self.calculateSlip(*args)
-        return self.get_tire_forces(Sx, Sy, args[4])
+        Sx, Sy, Sg, Sb = self.calculateSlip(*args)
+        return self.get_tire_forces(Sx, Sy, Sg, Sb, args[6])
         
     def __tire_offset__(self, Sy):
         Sy = abs(Sy) # absolute value because n(ny) = n(-Sy)
@@ -84,17 +85,20 @@ class Tire:
             dF = df0
         return F, dF
 
-    def calculateSlip(self, Vx, Vy, delta, omega_wheel, Fz):
+    def calculateSlip(self, Vx, Vy, delta, gamma, omega_wheel, Wn, Fz):
         # Calculate slip parameters
         Vn = 0.01
         Rd = self.lamb * self.tire_radius + (1 - self.lamb) * (self.tire_radius - Fz / self.cz)
+        L = 2 * np.sqrt(self.tire_radius * Fz / self.cz)
         Vxt = Vx * np.cos(delta) + Vy * np.sin(delta)
         Vyt = (-Vx * np.sin(delta)) + Vy * np.cos(delta)
         Sx = -(Vxt - Rd * omega_wheel) / (Rd * abs(omega_wheel) + Vn)
         Sy = -Vyt / (Rd * abs(omega_wheel) + Vn)
-        return Sx, Sy
+        Sg = -omega_wheel * np.sin(gamma) / (Rd * abs(omega_wheel) + Vn) * (L/2)
+        Sb = -(L/3) * Wn / (Rd * abs(omega_wheel) + Vn)
+        return Sx, Sy, Sg, Sb
 
-    def get_tire_forces(self, Sx, Sy, Fz):
+    def get_tire_forces(self, Sx, Sy, Sg, Sb, Fz):
         # Normalize slip
         Sxn = Sx / self.hsxn
         Syn = Sy / self.hsyn
@@ -117,8 +121,8 @@ class Tire:
         Ss = np.sqrt((self.Sxs / self.hsxn * cphi)**2 + (self.Sys / self.hsyn * sphi)**2)
         F, dF = self.__tire_combined_forces__(Sn, df0, Fm, Sm, Fs, Ss)
         Fx = F * cphi
-        Fy = F * sphi
-        Mz = -N * Fy
+        Fy = F * sphi + df0 * Sg / 3
+        Mz = -N * Fy + (L/3) * self.__tire_combined_forces__(Sb, df0, Fm, Sm, Fs, Ss)[0] # Rb = L/3
         return Fx, Fy, Mz, Sx, Sy
 
     def get_rolling_resistance(self, omega, Fz):
@@ -126,29 +130,18 @@ class Tire:
         Ty = - Rd * omega / (abs(Rd * omega) + 0.001) * Fz * self.tire_radius * self.frr
         return Ty
 
-    # def generate_data(self):
-    #     a=1
-
-    # def IPD(dados,blocos,p):
-    #     resultado = np.zeros(blocos)
-    #     for x in range(resultado.shape[0]):
-    #         for y in range(resultado.shape[1]):
-    #             dist = np.sqrt((x-dados[:,0])**2+(y-dados[:,1])**2)
-    #             if 0 in dist:
-    #                 ind = np.where(dist == 0)
-    #                 resultado[x,y] = dados[ind[0][0],2]
-    #             else:
-    #                 resultado[x,y] = np.sum((1/dist**p)*dados[:,2])/np.sum(1/dist**p)
-    #     return resultado
-
-    def all_info(self, Fz=3500):
+    def all_info(self, Fz=3500, camber_slip=0, bore_slip=0, matplotlib=True):
+        '''Prints information about the tires. Fz is in Newtons and camber_angle in radians'''
+        print("Vertical force considered: {:.0F}N".format(Fz))
+        print("Camber slip = {:.2f}".format(camber_slip))
+        print("Bore slip = {:.2f}".format(bore_slip))
         # Longitudinal slip
         Sx = np.linspace(-0.5, 0.5, 1001)
         sy = [0, 0.11, 0.22, 0.33, 0.44, 0.55]
         forces = []
         for slipy in sy:
-            Fx = [self.get_tire_forces(Sx[i], slipy, Fz)[0] for i in range(len(Sx))]
-            forces.append(Function(Sx, Fx, 'Slip longitudinal (sx)', 'Força longitudinal (N)', name='Sy={:.3F}'.format(slipy)))
+            Fx = [self.get_tire_forces(Sx[i], slipy, camber_slip, bore_slip, Fz)[0] for i in range(len(Sx))]
+            forces.append(Function(Sx, Fx, 'Slip longitudinal (sx)', 'Força longitudinal (N)', name='Sy={:.2F}, Sg={:.2F}'.format(slipy, camber_slip)))
         forces[0].comparaNPlots(forces[1:], title='Slip Longitudinal TMEasy')
 
         # Longitudinal slip
@@ -156,8 +149,8 @@ class Tire:
         sx = [0, 0.088, 0.176, 0.264, 0.352, 0.44]
         forces = []
         for slipx in sx:
-            Fy = [self.get_tire_forces(slipx, Sy[i], Fz)[1] for i in range(len(Sy))]
-            forces.append(Function(Sy, Fy, 'Slip Lateral (sy)', 'Força Lateral (N)', name='Sx={:.3F}'.format(slipx)))
+            Fy = [self.get_tire_forces(slipx, Sy[i], camber_slip, bore_slip, Fz)[1] for i in range(len(Sy))]
+            forces.append(Function(Sy, Fy, 'Slip Lateral (sy)', 'Força Lateral (N)', name='Sx={:.2F}, Sg={:.2F}'.format(slipx, camber_slip)))
         forces[0].comparaNPlots(forces[1:], title='Slip Lateral TMEasy')
 
         # Longitudinal slip
@@ -165,10 +158,10 @@ class Tire:
         sx = [0, 0.088, 0.176, 0.264, 0.352, 0.44]
         forces = []
         for slipx in sx:
-            Mz = [self.get_tire_forces(slipx, Sy[i], Fz)[2] for i in range(len(Sy))]
-            forces.append(Function(Sy, Mz, 'Slip Lateral (sy)', 'Momento restaurador (Nm)', name='Sx={:.3F}'.format(slipx)))
+            Mz = [self.get_tire_forces(slipx, Sy[i], camber_slip, bore_slip, Fz)[2] for i in range(len(Sy))]
+            forces.append(Function(Sy, Mz, 'Slip Lateral (sy)', 'Momento restaurador (Nm)', name='Sx={:.2F}, Sg={:.2F}'.format(slipx, camber_slip)))
         forces[0].comparaNPlots(forces[1:], title='Momento restaurador TMEasy')
-
+        
         # # Heatmap
         # x = y = np.linspace(-0.5, 0.5, 1001)
         # [SX, SY] = np.meshgrid(x, y)

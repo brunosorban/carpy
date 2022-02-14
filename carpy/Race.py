@@ -1,4 +1,3 @@
-import re
 import numpy as np
 from Function import Function
 from scipy import integrate
@@ -77,16 +76,17 @@ class Race:
         T1, T2, T3, T4 = self.Driver.get_torque(vvx)
         delta_sw = self.Driver.get_steering(t) # Get driver steering wheel angle
         delta_1, delta_2, delta_3, delta_4 = self.Vehicle.get_steer_wbw(delta_sw) # Get steering angle wheel-by-wheel
-        # print(delta_1, delta_2, delta_3, delta_4)
+        Wn_1, Wn_2, Wn_3, Wn_4 = 0, 0, 0, 0 # Wheel velocity
+        # gamma1, gamma2, gamma3, gamma4 = np.deg2rad(0), np.deg2rad(0), 0, 0 # Camber angle
 
         # Get tire weight distribution
         ftz_1, ftz_2, ftz_3, ftz_4, fs_1, fs_2, fs_3, fs_4 = self.Vehicle.get_vertical_load(z, vvz, phi, theta, phi_dot, theta_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, zc1, zc2, zc3, zc4, vz1, vz2, vz3, vz4)
 
         # Calculate tire forces
-        ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, omega1, ftz_1)
-        ftx_2, fty_2, Mz_2, sx_2, sy_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, omega2, ftz_2)
-        ftx_3, fty_3, Mz_3, sx_3, sy_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, omega3, ftz_3)
-        ftx_4, fty_4, Mz_4, sx_4, sy_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, omega4, ftz_4)
+        ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, self.Vehicle.gamma1, omega1, Wn_1, ftz_1)
+        ftx_2, fty_2, Mz_2, sx_2, sy_2 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_2, self.Vehicle.gamma2, omega2, Wn_2, ftz_2)
+        ftx_3, fty_3, Mz_3, sx_3, sy_3 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_3, self.Vehicle.gamma3, omega3, Wn_3, ftz_3)
+        ftx_4, fty_4, Mz_4, sx_4, sy_4 = self.Vehicle.Tire(vvx + psi_dot * self.Vehicle.wr/2, vvy - psi_dot * self.Vehicle.lr, delta_4, self.Vehicle.gamma4, omega4, Wn_4, ftz_4)
 
         # Get rolling resistance torques
         Trr1 = self.Vehicle.Tire.get_rolling_resistance(omega1, ftz_1)

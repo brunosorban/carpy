@@ -15,12 +15,18 @@ class Vehicle:
         self.cd = cd
         self.rho = rho
         self.CG_height = CG_height
-        self.h = CG_height - Tire.tire_radius
         self.Ixx = Ixx
         self.Iyy = Iyy
         self.Izz = Izz
         self.K_arf = 0
         self.K_arr = 0
+        self.gamma1 = 0
+        self.gamma2 = 0
+        self.gamma3 = 0
+        self.gamma4 = 0
+        
+        # Pre-calculations
+        self.h = CG_height - Tire.tire_radius
         self.Ff0 = self.lr / (2 * (self.lf + self.lr) ) * self.vehicle_mass * 9.81
         self.Fr0 = self.lf / (2 * (self.lf + self.lr) ) * self.vehicle_mass * 9.81
 
@@ -36,6 +42,12 @@ class Vehicle:
         elif position == 'r': self.K_sr += K_arz
         else: return print('Please insert a valid position. Position must be "f" or "r"')
         return None
+    
+    def set_camber(self, gamma1, gamma2, gamma3, gamma4):
+        self.gamma1 = gamma1
+        self.gamma2 = gamma2
+        self.gamma3 = gamma3
+        self.gamma4 = gamma4
 
     def get_vertical_load(self, z, vz, phi, theta, phi_dot, theta_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, zc1, zc2, zc3, zc4, vzc1, vzc2, vzc3, vzc4):
         # Retrieve suspension properties
