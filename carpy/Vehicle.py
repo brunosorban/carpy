@@ -36,12 +36,19 @@ class Vehicle:
         self.C_sf = C_sf
         self.C_sr = C_sr
 
-    def set_anti_roll_bar(self, d, a, b, G, position):
-        K_arz = G * (np.pi * d**4 / 32) * b / a**2
-        if position == 'f': self.K_sf += K_arz
-        elif position == 'r': self.K_sr += K_arz
-        else: return print('Please insert a valid position. Position must be "f" or "r"')
-        return None
+    def set_anti_roll_bar(self, position, d=0, a=0, b=0, G=0, K_arz=False):
+        K_arz = G * (np.pi * d**4 / 32) * b / a**2 if not K_arz else K_arz
+
+        if position == 'f': 
+            self.K_sf += K_arz
+            print('Anti-roll Bar (front) = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
+        elif position == 'r': 
+            self.K_sr += K_arz
+            print('Anti-roll Bar (rear)  = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
+        else: 
+            return print('Please insert a valid position. Position must be "f" or "r"')
+        
+        return K_arz
     
     def set_camber(self, gamma1, gamma2, gamma3, gamma4):
         self.gamma1 = gamma1

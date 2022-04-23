@@ -51,6 +51,7 @@ class Function:
     
     def plot2D(self, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
         # Função para gerar os plots que serão utilizados no relatório.
+        if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
         if style == 'matplotlib' or style == 'science':
             if style == 'science': plt.style.use('science')
             lower = self.I[0] if lower is None else lower
@@ -84,7 +85,6 @@ class Function:
             upper = self.I[1] if upper is None else upper
             X = np.linspace(lower, upper, 10001)
             Y = self.getValue(X)
-            if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
             fig.update_layout(title=title,
@@ -98,26 +98,39 @@ class Function:
 
             if display: fig.show()
 
-    def plotparametric(self, title='', export=False, display=True):
+    def plotparametric(self, title='', export=False, display=True, style='plotly'):
         # Função para gerar os plots que serão utilizados no relatório.
         X = self.__X_source__
         Y = self.__Y_source__
         if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
-        fig.update_layout(title=title,
-                   xaxis_title=self.__X_source_label__,
-                   yaxis_title=self.__X_source_label__)
-        if type(export) == bool:
-            if export:
-                fig.write_image(title + '.svg')
-        elif type(export) == str:
-            fig.write_image(export + '.pdf')
-        fig.update_yaxes(
-            scaleanchor = "x",
-            scaleratio = 1,
-        )
-        if display: fig.show()
+        
+        if style == 'plotly':
+            fig = go.Figure()   
+            fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
+            fig.update_layout(title=title,
+                    xaxis_title=self.__X_source_label__,
+                    yaxis_title=self.__X_source_label__)
+            if type(export) == bool:
+                if export:
+                    fig.write_image(title + '.svg')
+            elif type(export) == str:
+                fig.write_image(export + '.pdf')
+            fig.update_yaxes(
+                scaleanchor = "x",
+                scaleratio = 1,
+            )
+            if display: fig.show()
+        else:
+            plt.figure()
+            plt.plot(X, Y)
+            plt.xlabel(self.__X_source_label__, fontsize=14)
+            plt.ylabel(self.__Y_source_label__, fontsize=14)
+            plt.title(title, fontsize=16)
+            plt.xticks(fontsize=12)
+            plt.yticks(fontsize=12)
+            plt.axis('equal')
+            plt.grid()
+            if display: plt.show()
 
     def compara2Plots(self, dataB, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
         # Função para gerar os plots que serão utilizados no relatório.
@@ -179,6 +192,7 @@ class Function:
             X = np.linspace(lower, upper, 2001)
             Y = self.getValue(X)
 
+            plt.figure(figsize=(8.09016994375, 5))
             plt.plot(X, Y)
             for i in range(len(data)):
                 plt.plot(X, data[i].getValue(X))
@@ -360,3 +374,6 @@ class Function:
             for j in range(1, i+1):
                 T[i][j] = (T[i][j-1] + (T[i][j-1] - T[i-1][j-1]) / (4**j - 1))
         return T
+    
+    def derivate(self, x=0, dx=0.001):
+        return (self.getValue(x+dx) - self.getValue(x)) / dx

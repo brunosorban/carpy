@@ -151,6 +151,7 @@ class Tire:
         for slipx in sx:
             Fy = [self.get_tire_forces(slipx, Sy[i], camber_slip, bore_slip, Fz)[1] for i in range(len(Sy))]
             forces.append(Function(Sy, Fy, 'Slip Lateral (sy)', 'Força Lateral (N)', name='Sx={:.2F}, Sg={:.2F}'.format(slipx, camber_slip)))
+        print('Coenering stiffness = {:.1f}N/৹'.format(forces[0].derivate(0, np.deg2rad(1)) * np.deg2rad(1)))
         forces[0].comparaNPlots(forces[1:], title='Slip Lateral TMEasy')
 
         # Longitudinal slip

@@ -53,7 +53,6 @@ class Race:
         # Get velocities in vehicle coordinate system
         [vvx, vvy, vvz] = C @ [vx, vy, vz]
         g = C @ np.array([0, 0, -9.81])
-        # v = np.sqrt(vvx**2 + vvy**2 + vvz**2)
 
         # Get track variables; A base rotation is applied to consider distance from CG to each wheel
         Ct = self.rotation_matrix(0, 0, psi)
@@ -67,20 +66,23 @@ class Race:
         zc3 = self.Track.get_track_height(xc3, yc3)
         zc4 = self.Track.get_track_height(xc4, yc4)
 
-        # vzc1 = self.Track.get_track_speed(xc1, yc1, vx, vy)
-        # vzc2 = self.Track.get_track_speed(xc2, yc2, vx, vy)
-        # vzc3 = self.Track.get_track_speed(xc3, yc3, vx, vy)
-        # vzc4 = self.Track.get_track_speed(xc4, yc4, vx, vy)
+        vzc1 = self.Track.get_track_speed(xc1, yc1, vx, vy)
+        vzc2 = self.Track.get_track_speed(xc2, yc2, vx, vy)
+        vzc3 = self.Track.get_track_speed(xc3, yc3, vx, vy)
+        vzc4 = self.Track.get_track_speed(xc4, yc4, vx, vy)
         
         # Get control variables
-        T1, T2, T3, T4 = self.Driver.get_torque(vvx)
+        T1, T2, T3, T4 = self.Driver.get_torque(vvx, t)
         delta_sw = self.Driver.get_steering(t) # Get driver steering wheel angle
         delta_1, delta_2, delta_3, delta_4 = self.Vehicle.get_steer_wbw(delta_sw) # Get steering angle wheel-by-wheel
         Wn_1, Wn_2, Wn_3, Wn_4 = 0, 0, 0, 0 # Wheel velocity
         # gamma1, gamma2, gamma3, gamma4 = np.deg2rad(0), np.deg2rad(0), 0, 0 # Camber angle
 
         # Get tire weight distribution
-        ftz_1, ftz_2, ftz_3, ftz_4, fs_1, fs_2, fs_3, fs_4 = self.Vehicle.get_vertical_load(z, vvz, phi, theta, phi_dot, theta_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, zc1, zc2, zc3, zc4, vz1, vz2, vz3, vz4)
+        ftz_1, ftz_2, ftz_3, ftz_4, fs_1, fs_2, fs_3, fs_4 = self.Vehicle.get_vertical_load(z, vvz, phi, theta, phi_dot, theta_dot, z1, z2, z3, z4, vz1, vz2, vz3, vz4, zc1, zc2, zc3, zc4, vzc1, vzc2, vzc3, vzc4)
+        if min(ftz_1, ftz_2, ftz_3, ftz_4, fs_1, fs_2, fs_3, fs_4) < 0: 
+            self.solver.status = 'finished'
+            return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
         # Calculate tire forces
         ftx_1, fty_1, Mz_1, sx_1, sy_1 = self.Vehicle.Tire(vvx - psi_dot * self.Vehicle.wf/2, vvy + psi_dot * self.Vehicle.lf, delta_1, self.Vehicle.gamma1, omega1, Wn_1, ftz_1)
@@ -262,13 +264,13 @@ class Race:
         self.last_avy = 0
 
         # Create the solver
-        solver = integrate.LSODA(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
+        self.solver = integrate.LSODA(self.uDot, t0=0, y0=self.initialSolution, t_bound=self.maxTime, max_step=self.maxStep, rtol=self.rtol, atol=self.atol)
         
         # Iterate until max_time is reached
-        while solver.status != 'finished':
-            solver.step()
-            self.time.append(solver.t)
-            self.solution.append(solver.y)
+        while self.solver.status != 'finished':
+            self.solver.step()
+            self.time.append(self.solver.t)
+            self.solution.append(self.solver.y)
         print("Solution Finished")
 
     def post_process(self):

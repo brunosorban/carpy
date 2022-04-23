@@ -11,20 +11,25 @@ class Driver:
         if steer == 'P': 
             self.T1_control = self.proportional_accelerator
             self.T2_control = self.proportional_accelerator
-            self.T3_control = lambda V: 0*V
-            self.T4_control = lambda V: 0*V
+            self.T3_control = lambda V, t: 0*V
+            self.T4_control = lambda V, t: 0*V
 
-        elif steer == 'CT': 
-            self.T1_control = self.constant_throttle
-            self.T2_control = self.constant_throttle
-            self.T3_control = lambda V: 0*V
-            self.T4_control = lambda V: 0*V
+        elif steer == 'PI': 
+            self.T1_control = self.PI_throttle
+            self.T2_control = self.PI_throttle
+            self.T3_control = lambda V, t: 0*V
+            self.T4_control = lambda V, t: 0*V
+            self.integrado = 0
+            self.last_time = 0
+            self.last_time_control = 0
+            self.Vref = 20
+            self.last_error = self.Vref
 
         else: 
-            self.T1_control = lambda V: 0*V
-            self.T2_control = lambda V: 0*V
-            self.T3_control = lambda V: 0*V
-            self.T4_control = lambda V: 0*V
+            self.T1_control = lambda V, t: 0*V
+            self.T2_control = lambda V, t: 0*V
+            self.T3_control = lambda V, t: 0*V
+            self.T4_control = lambda V, t: 0*V
 
         self.torque_control = np.array([self.T1_control, self.T2_control, self.T3_control, self.T4_control])
 
@@ -34,7 +39,7 @@ class Driver:
             self.delta_control = self.steering
 
         elif steering == 'steering2':
-            print('steering2 defined.') 
+            print('steering2 defined.')
             self.delta_control = self.steering2
 
         elif steering == 'S': 
@@ -55,23 +60,28 @@ class Driver:
 
         self.steering_control = self.delta_control
 
-    def get_torque(self, V):
-        return  self.torque_control[0](V), self.torque_control[1](V), self.torque_control[2](V), self.torque_control[3](V)
+    def get_torque(self, V, t):
+        return  self.torque_control[0](V, t), self.torque_control[1](V, t), self.torque_control[2](V, t), self.torque_control[3](V, t)
     
     def get_steering(self, sim_time):
         return self.steering_control(sim_time)
             
-    def proportional_accelerator(self, V):
+    def proportional_accelerator(self, V, t):
         K = 100
         Vref = 10
         dV = Vref - V
         return K * dV if  K * dV < 250 else 250
 
-    def constant_throttle(self, V):
-        K = 1000
-        Vref = 300
-        dV = Vref - V
-        return K * dV if  K * dV < 700 else 700
+    def PI_throttle(self, V, t):
+        dt = 0.01
+        Kp = 1
+        Ki = 0.1
+        e = self.Vref - V
+        if t - self.last_time_control > dt:
+            self.integrado += (self.last_error + e) / 2 * dt
+            self.last_time_control = t
+            self.last_error = e
+        return Kp * e + Ki * self.integrado
 
     def steering(self, sim_time):
         if sim_time <= 30: return 0
@@ -79,8 +89,8 @@ class Driver:
         else: return 3 * np.pi / 180
 
     def steering2(self, sim_time):
-        if sim_time <= 20: return 0
-        else: return 7 * np.pi / 180
+        if sim_time <= 0.1: return 0
+        else: return 3 * np.pi / 180
     
     def Scurve(self, sim_time, angle=3):
         if sim_time <= 30: return 0
