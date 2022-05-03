@@ -49,7 +49,7 @@ class Function:
             y = self.f(x)
         return y
     
-    def plot2D(self, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+    def plot2D(self, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style='matplotlib'):
         # Função para gerar os plots que serão utilizados no relatório.
         if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
         if style == 'matplotlib' or style == 'science':
@@ -98,7 +98,7 @@ class Function:
 
             if display: fig.show()
 
-    def plotparametric(self, title='', export=False, display=True, style='plotly'):
+    def plotparametric(self, title='', export=False, display=True, style='matplotlib'):
         # Função para gerar os plots que serão utilizados no relatório.
         X = self.__X_source__
         Y = self.__Y_source__
@@ -132,7 +132,7 @@ class Function:
             plt.grid()
             if display: plt.show()
 
-    def compara2Plots(self, dataB, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+    def compara2Plots(self, dataB, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style='matplotlib'):
         # Função para gerar os plots que serão utilizados no relatório.
         if style == 'matplotlib' or style == 'science':
             if style == 'science': plt.style.use('science')
@@ -183,7 +183,7 @@ class Function:
             if display: fig.show()
             # return fig
     
-    def comparaNPlots(self, data, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+    def comparaNPlots(self, data, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style='matplotlib'):
         # Function use to compare plots. Insert a lists of plots that should be compared with the main plot (function used to call the compare plot)
         if style == 'matplotlib' or style == 'science':
             if style == 'science': plt.style.use('science')
