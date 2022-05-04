@@ -486,18 +486,18 @@ class Race:
         screen = pygame.display.set_mode(size)
         
         # Preparing images
-        background = pygame.image.load('../Animation/TrackT01.png')
+        background = pygame.image.load('../../Animation/TrackT01.png')
         background = (pygame.transform.scale(background, (size)))
         
         # background = screen.fill([255, 255, 255])
 
-        car = pygame.image.load('../Animation/Car.png')
-        car = pygame.transform.scale(car, (128, 128)) if scale else pygame.transform.scale(car, (3.2 * 1920 / (xlim-xlim_inf), 2.6 * 1920 / (xlim-xlim_inf)))
+        car = pygame.image.load('../../Animation/Car.png')
+        car = pygame.transform.scale(car, (128, 128)) if not scale else pygame.transform.scale(car, (3.2 * 1920 / (xlim-xlim_inf), 2.6 * 1920 / (xlim-xlim_inf)))
 
-        car_side = pygame.image.load('../Animation/Car side.png')
+        car_side = pygame.image.load('../../Animation/Car side.png')
         car_side = pygame.transform.scale(car_side, (int(65 * car_side.get_width() / car_side.get_height()), 65))
 
-        car_front = pygame.image.load('../Animation/Car front.png')
+        car_front = pygame.image.load('../../Animation/Car front.png')
         car_front = pygame.transform.scale(car_front, (128, 128))
 
         # Initialize position vectors

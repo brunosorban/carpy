@@ -32,7 +32,7 @@ class Driver:
             Kp = 150
             Ti = 7
             Td = 0.3
-            V = 100 / 3.6
+            V = 60 / 3.6
             self.dt = 0.01
             
             self.pid = PID(Kp, Kp * Ti, Kp * Td, setpoint=V, sample_time=None, output_limits = (-500, 500))
@@ -100,6 +100,22 @@ class Driver:
             print('Smooth S-Curve defined.')
             self.delta_control = self.smoothScurve(name="δ1")
 
+        elif steering == 'DLC':
+            print('Double Lane-Change defined.')
+            def brute_DLC(t, angle=6):
+                if t <= 30: return 0
+                elif 30 < t <= 31.93: return np.deg2rad(angle) * np.sin((t - 30) * 2 * np.pi /2)
+                elif 31.93 < t < 33.4: return 0
+                elif 33.4 < t <= 35.318: return -np.deg2rad(angle) * np.sin((t - 33.4) * 2 * np.pi / 2)
+                else: return 0
+            t = np.linspace(0, 100, 10001)
+            y = [brute_DLC(ti) for ti in t]
+            self.DLC_func = Function(t, y, method='cubicSpline', xlabel='Time (s)', ylabel='Steering angle (rad)')
+            
+            self.delta_control = self.DLC
+            
+            self.DLC_func.plot2D('Steering angle in time', lower=25, upper=40)
+            
         elif steering == 'sinusoidal': 
             print('sinusoidal defined.')
             self.delta_control = self.sinusoidal
@@ -174,6 +190,10 @@ class Driver:
         elif 30 < sim_time <= 50: return (angle *  np.pi / 180) * np.sin((sim_time - 30) * 2 * np.pi / 20)
         else: return 0
 
+    def DLC(self, sim_time):
+        # O angulo deve ser definido antes
+        return self.DLC_func(sim_time)
+        
     def smoothScurve(self, angle=3, name=None):
         t = np.linspace(0, 100, 101)
         y = [self.Scurve(ti, angle=angle) for ti in t]
