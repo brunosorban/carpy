@@ -49,7 +49,7 @@ class Function:
             y = self.f(x)
         return y
     
-    def plot2D(self, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+    def plot2D(self, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=None):
         # Função para gerar os plots que serão utilizados no relatório.
         if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__
         if style == 'matplotlib' or style == 'science':
@@ -115,10 +115,7 @@ class Function:
                     fig.write_image(title + '.svg')
             elif type(export) == str:
                 fig.write_image(export + '.pdf')
-            fig.update_yaxes(
-                scaleanchor = "x",
-                scaleratio = 1,
-            )
+            # fig.update_yaxes(scaleanchor = "x", scaleratio = 1)
             if display: fig.show()
         else:
             plt.figure()
@@ -132,7 +129,7 @@ class Function:
             plt.grid()
             if display: plt.show()
 
-    def compara2Plots(self, dataB, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+    def compara2Plots(self, dataB, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=None):
         # Função para gerar os plots que serão utilizados no relatório.
         if style == 'matplotlib' or style == 'science':
             if style == 'science': plt.style.use('science')
@@ -183,7 +180,7 @@ class Function:
             if display: fig.show()
             # return fig
     
-    def comparaNPlots(self, data, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=False):
+    def comparaNPlots(self, data, title='', lower=None, upper=None, export=False, xscale="linear", yscale="linear", display=True, style=None):
         # Function use to compare plots. Insert a lists of plots that should be compared with the main plot (function used to call the compare plot)
         if style == 'matplotlib' or style == 'science':
             if style == 'science': plt.style.use('science')
@@ -251,7 +248,7 @@ class Function:
         dy = float(self.__Y_source__[position] - self.__Y_source__[position-1])
         return self.__Y_source__[position-1] + (dy/dx) * (x - self.__X_source__[position-1])
 
-    def MMQ(self, ordem = 3):
+    def MMQ(self, ordem = 5):
         '''
         Faz a interpolação dos dados pelo método do mínimos quadrados.
         Input: ordem - ordem da interpolação;
@@ -284,7 +281,7 @@ class Function:
             return fx
         
         self.f = f
-        self.__Y_source__ = self.f(self.__X_source__)
+        # self.__Y_source__ = self.f(self.__X_source__)
         return f
 
     def interPolinomial(self):

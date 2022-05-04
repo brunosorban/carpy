@@ -75,7 +75,7 @@ class Race:
         T1, T2, T3, T4 = self.Driver.get_torque(vvx, t)
         delta_sw = self.Driver.get_steering(t) # Get driver steering wheel angle
         delta_1, delta_2, delta_3, delta_4 = self.Vehicle.get_steer_wbw(delta_sw) # Get steering angle wheel-by-wheel
-        Wn_1, Wn_2, Wn_3, Wn_4 = 0, 0, 0, 0 # Wheel velocity
+        Wn_1, Wn_2, Wn_3, Wn_4 = 0, 0, 0, 0 # Wheel vertical velocity
         # gamma1, gamma2, gamma3, gamma4 = np.deg2rad(0), np.deg2rad(0), 0, 0 # Camber angle
 
         # Get tire weight distribution
@@ -274,6 +274,9 @@ class Race:
         print("Solution Finished")
 
     def post_process(self):
+        # Reset accelerator
+        self.Driver.set_accelerator(self.Driver.accelerator)
+        self.Driver.set_steering(self.Driver.steering)
         # Initialize the data
         self.T1 = [0]
         self.T2 = [0]
@@ -463,7 +466,7 @@ class Race:
                 y_factor = x_factor
         return np.array([(x + abs(xlim_inf)) * x_factor, (y - abs(ylim_inf)) * y_factor])
 
-    def animate(self, timeMax, save=False):
+    def animate(self, timeMax, save=False, scale=False):
         # Initialization
         xlim_inf = abs(min(self.x.__Y_source__))
         xlim = max(self.x.__Y_source__) + 1e-3 + xlim_inf
@@ -483,18 +486,18 @@ class Race:
         screen = pygame.display.set_mode(size)
         
         # Preparing images
-        background = pygame.image.load('../Animation/TrackT01.png')
+        background = pygame.image.load('../../Animation/TrackT01.png')
         background = (pygame.transform.scale(background, (size)))
         
         # background = screen.fill([255, 255, 255])
 
-        car = pygame.image.load('../Animation/Car.png')
-        car = pygame.transform.scale(car, (128, 128))
+        car = pygame.image.load('../../Animation/Car.png')
+        car = pygame.transform.scale(car, (128, 128)) if not scale else pygame.transform.scale(car, (3.2 * 1920 / (xlim-xlim_inf), 2.6 * 1920 / (xlim-xlim_inf)))
 
-        car_side = pygame.image.load('../Animation/Car side.png')
+        car_side = pygame.image.load('../../Animation/Car side.png')
         car_side = pygame.transform.scale(car_side, (int(65 * car_side.get_width() / car_side.get_height()), 65))
 
-        car_front = pygame.image.load('../Animation/Car front.png')
+        car_front = pygame.image.load('../../Animation/Car front.png')
         car_front = pygame.transform.scale(car_front, (128, 128))
 
         # Initialize position vectors
