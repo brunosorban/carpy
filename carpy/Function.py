@@ -115,7 +115,7 @@ class Function:
                     fig.write_image(title + '.svg')
             elif type(export) == str:
                 fig.write_image(export + '.pdf')
-            # fig.update_yaxes(scaleanchor = "x", scaleratio = 1)
+            fig.update_yaxes(scaleanchor = "x", scaleratio = 1)
             if display: fig.show()
         else:
             plt.figure()
@@ -218,7 +218,7 @@ class Function:
         else:
             lower = self.I[0] if lower is None else lower
             upper = self.I[1] if upper is None else upper
-            X = np.linspace(lower, upper, 2001)
+            X = np.linspace(lower, upper, 20001)
             Y = self.getValue(X)
             if title == '': title = self.__X_source_label__ + ' x ' + self.__Y_source_label__ + ' Comparison '
 

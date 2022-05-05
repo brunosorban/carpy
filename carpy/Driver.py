@@ -29,13 +29,13 @@ class Driver:
             self.last_error = self.Vref
             
         elif accelerator == 'PID':
-            Kp = 150
+            Kp = 380
             Ti = 7
             Td = 0.3
-            V = 60 / 3.6
+            V = 45 / 3.6
             self.dt = 0.01
             
-            self.pid = PID(Kp, Kp * Ti, Kp * Td, setpoint=V, sample_time=None, output_limits = (-500, 500))
+            self.pid = PID(Kp, Kp * Ti, Kp * Td, setpoint=V, sample_time=None, output_limits = (-310, 310))
             self.last_time_control = 0
             self.output = 0
             self.T1_control = self.PID_throttle
@@ -50,7 +50,7 @@ class Driver:
             V = 0
             self.dt = 0.001
             
-            self.pid = PID(Kp, Kp * Ti, Kp * Td, setpoint=V, sample_time=None, output_limits = (-500, 500))
+            self.pid = PID(Kp, Kp * Ti, Kp * Td, setpoint=V, sample_time=None, output_limits = (-250, 250))
             self.last_time_control = 0
             self.output = 0
             self.T1_control = self.PID_throttle_SSCD
@@ -175,9 +175,9 @@ class Driver:
             self.last_time_control = t
         return self.output
     
-    def steering1(self, sim_time, angle=np.deg2rad(2.9)):
-        if sim_time <= 30: return 0
-        elif 30 < sim_time <= 30.1: return ((sim_time - 30) / 0.1) * angle
+    def steering1(self, sim_time, angle=np.deg2rad(1)):
+        if sim_time <= 50: return 0
+        elif 50 < sim_time <= 50.1: return ((sim_time - 50) / 0.1) * angle
         else: return angle
 
     def steering2(self, sim_time, angle=np.deg2rad(2.9)):

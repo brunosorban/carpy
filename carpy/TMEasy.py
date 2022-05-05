@@ -2,11 +2,10 @@ from math import gamma
 import numpy as np
 from Function import Function
 
-''' Here lies an inplementation of TMEasy tire model from George Rill and Abel
-Castro. The implmentation is based on the Matlab code presented at Road Vehicle 
-Dynamics, second edition.'''
-
 class Tire:
+    ''' Here lies an inplementation of TMEasy tire model from George Rill and Abel
+    Castro. The implmentation is based on the Matlab code presented at Road Vehicle 
+    Dynamics, second edition.'''
     def __init__(self, radius, mass, Jzz, cz, dfx0, dfy0, Fxm, Fym, Sxm, Sym, Fxs, Fys, Sxs, Sys, Sy0, SyE, lamb, n2L0, frr):
         self.tire_radius = radius
         self.mass = mass
@@ -130,7 +129,7 @@ class Tire:
         Ty = - Rd * omega / (abs(Rd * omega) + 0.001) * Fz * self.tire_radius * self.frr
         return Ty
 
-    def all_info(self, Fz=3500, camber_slip=0, bore_slip=0, matplotlib=True):
+    def all_info(self, Fz=16000, camber_slip=0, bore_slip=0, matplotlib=True):
         '''Prints information about the tires. Fz is in Newtons and camber_angle in radians'''
         print("Vertical force considered: {:.0F}N".format(Fz))
         print("Camber slip = {:.2f}".format(camber_slip))

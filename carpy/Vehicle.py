@@ -40,10 +40,10 @@ class Vehicle:
         K_arz = G * (np.pi * d**4 / 32) * b / a**2 if not K_arz else K_arz
 
         if position == 'f': 
-            self.K_sf += K_arz
+            self.K_arf = K_arz
             print('Anti-roll Bar (front) = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
         elif position == 'r': 
-            self.K_sr += K_arz
+            self.K_arr = K_arz
             print('Anti-roll Bar (rear)  = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
         else: 
             return print('Please insert a valid position. Position must be "f" or "r"')
@@ -76,10 +76,10 @@ class Vehicle:
         sthetadot = np.sin(theta_dot)
 
         # Calculate tire forces        
-        Ft1 = F10 + Kt * (zc1 - z1) + Ct * (vzc1 - vz1)
-        Ft2 = F20 + Kt * (zc2 - z2) + Ct * (vzc2 - vz2)
-        Ft3 = F30 + Kt * (zc3 - z3) + Ct * (vzc3 - vz3)
-        Ft4 = F40 + Kt * (zc4 - z4) + Ct * (vzc4 - vz4)
+        Ft1 = F10 + Kt * (zc1 - z1) + Ct * (vzc1 - vz1) + self.K_arf * stheta / (self.wf/2)
+        Ft2 = F20 + Kt * (zc2 - z2) + Ct * (vzc2 - vz2) - self.K_arf * stheta / (self.wf/2)
+        Ft3 = F30 + Kt * (zc3 - z3) + Ct * (vzc3 - vz3) + self.K_arr * stheta / (self.wf/2)
+        Ft4 = F40 + Kt * (zc4 - z4) + Ct * (vzc4 - vz4) - self.K_arr * stheta / (self.wf/2)
         
         # Calculate suspension forces
         Fs1 = F10 + K_sf * (z1 - z - self.wf/2 * sphi + self.lf * stheta) + C_sf * (vz1 - vz - self.wf/2 * sphidot + self.lf * sthetadot)

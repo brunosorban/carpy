@@ -506,7 +506,7 @@ class Race:
         position_side = np.array([0, 128+52])
         position_front = np.array([0, 270])
         # last_position = position
-        timeCount = 0
+        timeCount = 50
         scale = 3
 
         # Iteration in time
