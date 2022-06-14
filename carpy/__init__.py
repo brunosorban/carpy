@@ -1,8 +1,8 @@
 __author__ = "Bruno Abdulklech Sorban"
 __copyright__ = "Copyright 20XX, Bruno Sorban"
-__credits__ = ["Flavio Celso Trigo", "RocketPy"]
+__credits__ = ["Prof. Dr. Flavio Celso Trigo", "RocketPy"]
 __license__ = "MIT"
-__version__ = "0.1"
+__version__ = "0.2"
 __maintainer__ = "Bruno Abdulklech Sorban"
 __email__ = "brunosorban@gmail.com"
 __status__ = "Production"
