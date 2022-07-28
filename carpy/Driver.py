@@ -26,7 +26,7 @@ class Driver:
             self.integrado = 0
             self.last_time = 0
             self.last_time_control = 0
-            self.Vref = 100 / 3.6
+            self.Vref = 60 / 3.6
             self.last_error = self.Vref
 
         elif accelerator == "PID":
@@ -186,14 +186,17 @@ class Driver:
 
     def PI_throttle(self, V, t):
         dt = 0.01
-        Kp = 1
-        Ki = 0.1
+        Kp = 150
+        Ki = 7
         e = self.Vref - V
         if t - self.last_time_control > dt:
             self.integrado += (self.last_error + e) / 2 * dt
             self.last_time_control = t
             self.last_error = e
-        return Kp * e + Ki * self.integrado
+        out = Kp * e + Ki * self.integrado
+        if out > 500: out = 500
+        if out < -500: out = -500
+        return out
 
     def PID_throttle(self, V, t):
         dt = t - self.last_time_control

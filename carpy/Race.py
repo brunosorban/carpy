@@ -287,9 +287,9 @@ class Race:
         Ct = self.rotation_matrix(0, 0, psi)
         [xc1, yc1, zc1] = np.transpose(Ct) @ [self.Vehicle.lf, self.Vehicle.wf, 0] + [x, y, 0]
         [xc2, yc2, zc2] = np.transpose(Ct) @ [self.Vehicle.lf, -self.Vehicle.wf, 0] + [x, y, 0]
-        [xc3, yc3, zc2] = np.transpose(Ct) @ [-self.Vehicle.lr, self.Vehicle.wr, 0] + [x, y, 0]
-        [xc4, yc4, zc2] = np.transpose(Ct) @ [-self.Vehicle.lr, -self.Vehicle.wr, 0] + [x, y, 0]
-
+        [xc3, yc3, zc3] = np.transpose(Ct) @ [-self.Vehicle.lr, self.Vehicle.wr, 0] + [x, y, 0]
+        [xc4, yc4, zc4] = np.transpose(Ct) @ [-self.Vehicle.lr, -self.Vehicle.wr, 0] + [x, y, 0]
+        
         zc1 = self.Track.get_track_height(xc1, yc1)
         zc2 = self.Track.get_track_height(xc2, yc2)
         zc3 = self.Track.get_track_height(xc3, yc3)

@@ -36,17 +36,18 @@ class Vehicle:
         self.Ixx = Ixx
         self.Iyy = Iyy
         self.Izz = Izz
-        self.K_arf = 0
-        self.K_arr = 0
+        # self.K_arf = 0
+        # self.K_arr = 0
         self.gamma1 = 0
         self.gamma2 = 0
         self.gamma3 = 0
         self.gamma4 = 0
-
+        self.gravity = 9.81
+        
         # Pre-calculations
         self.h = CG_height - Tire.tire_radius
-        self.Ff0 = self.lr / (2 * (self.lf + self.lr)) * self.vehicle_mass * 9.81
-        self.Fr0 = self.lf / (2 * (self.lf + self.lr)) * self.vehicle_mass * 9.81
+        self.Ff0 = self.lr / (2 * (self.lf + self.lr) ) * self.vehicle_mass * self.gravity
+        self.Fr0 = self.lf / (2 * (self.lf + self.lr) ) * self.vehicle_mass * self.gravity
 
     def set_suspension(self, K_sf, K_sr, C_sf, C_sr):
         self.K_sf = K_sf
@@ -55,15 +56,15 @@ class Vehicle:
         self.C_sr = C_sr
 
     def set_anti_roll_bar(self, position, d=0, a=0, b=0, G=0, K_arz=False):
-        K_arz = G * (np.pi * d ** 4 / 32) * b / a ** 2 if not K_arz else K_arz
+        K_arz = G * (np.pi * d**4 / 32) / (b * a**2) if not K_arz else K_arz
 
-        if position == "f":
-            self.K_arf = K_arz
-            print("Anti-roll Bar (front) = {:.1f} Nm/৹".format(np.deg2rad(K_arz)))
-        elif position == "r":
-            self.K_arr = K_arz
-            print("Anti-roll Bar (rear)  = {:.1f} Nm/৹".format(np.deg2rad(K_arz)))
-        else:
+        if position == 'f': 
+            self.K_arzf = K_arz
+            print('Anti-roll Bar (front) = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
+        elif position == 'r': 
+            self.K_arzr = K_arz
+            print('Anti-roll Bar (rear)  = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
+        else: 
             return print('Please insert a valid position. Position must be "f" or "r"')
 
         return K_arz
@@ -101,7 +102,7 @@ class Vehicle:
     ):
         # Retrieve suspension properties
         Kt = self.Tire.cz
-        Ct = 0
+        Ct = 0 # pneu sem amortecimento
         K_sf = self.K_sf
         K_sr = self.K_sr
         C_sf = self.C_sf
