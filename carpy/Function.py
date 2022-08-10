@@ -232,7 +232,7 @@ class Function:
 
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=X, y=Y, name=self.name))
-            fig.add_trace(go.Scatter(x=X, y=Yb, name=dataB.name))
+            fig.add_trace(go.Scatter(x=X, y=500 * Yb, name=dataB.name))
             fig.update_layout(
                 title=title,
                 xaxis_title=self.__X_source_label__,

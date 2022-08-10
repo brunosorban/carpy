@@ -1,5 +1,4 @@
 import numpy as np
-from Function import Function
 
 
 class Vehicle:
@@ -36,18 +35,22 @@ class Vehicle:
         self.Ixx = Ixx
         self.Iyy = Iyy
         self.Izz = Izz
-        # self.K_arf = 0
-        # self.K_arr = 0
+        self.K_arf = 0  # anti-roll bar parameters
+        self.K_arr = 0  # anti-roll bar parameters
         self.gamma1 = 0
         self.gamma2 = 0
         self.gamma3 = 0
         self.gamma4 = 0
         self.gravity = 9.81
-        
+
         # Pre-calculations
         self.h = CG_height - Tire.tire_radius
-        self.Ff0 = self.lr / (2 * (self.lf + self.lr) ) * self.vehicle_mass * self.gravity
-        self.Fr0 = self.lf / (2 * (self.lf + self.lr) ) * self.vehicle_mass * self.gravity
+        self.Ff0 = (
+            self.lr / (2 * (self.lf + self.lr)) * self.vehicle_mass * self.gravity
+        )
+        self.Fr0 = (
+            self.lf / (2 * (self.lf + self.lr)) * self.vehicle_mass * self.gravity
+        )
 
     def set_suspension(self, K_sf, K_sr, C_sf, C_sr):
         self.K_sf = K_sf
@@ -56,15 +59,15 @@ class Vehicle:
         self.C_sr = C_sr
 
     def set_anti_roll_bar(self, position, d=0, a=0, b=0, G=0, K_arz=False):
-        K_arz = G * (np.pi * d**4 / 32) / (b * a**2) if not K_arz else K_arz
+        K_arz = G * (np.pi * d ** 4 / 32) / (b * a ** 2) if not K_arz else K_arz
 
-        if position == 'f': 
-            self.K_arzf = K_arz
-            print('Anti-roll Bar (front) = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
-        elif position == 'r': 
-            self.K_arzr = K_arz
-            print('Anti-roll Bar (rear)  = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
-        else: 
+        if position == "f":
+            self.K_arf = K_arz
+            print("Anti-roll Bar (front) = {:.1f} Nm/৹".format(np.deg2rad(K_arz)))
+        elif position == "r":
+            self.K_arr = K_arz
+            print("Anti-roll Bar (rear)  = {:.1f} Nm/৹".format(np.deg2rad(K_arz)))
+        else:
             return print('Please insert a valid position. Position must be "f" or "r"')
 
         return K_arz
@@ -102,11 +105,7 @@ class Vehicle:
     ):
         # Retrieve suspension properties
         Kt = self.Tire.cz
-        Ct = 0 # pneu sem amortecimento
-        K_sf = self.K_sf
-        K_sr = self.K_sr
-        C_sf = self.C_sf
-        C_sr = self.C_sr
+        Ct = 0  # tire without damping
 
         # Get static forces distribution
         F10 = F20 = self.Ff0
@@ -115,57 +114,46 @@ class Vehicle:
         # Calculate sines used
         sphi = np.sin(phi)
         stheta = np.sin(theta)
-        sphidot = np.sin(phi_dot)
-        sthetadot = np.sin(theta_dot)
+        cphi = np.cos(phi)
+        ctheta = np.cos(theta)
 
         # Calculate tire forces
-        Ft1 = (
-            F10
-            + Kt * (zc1 - z1)
-            + Ct * (vzc1 - vz1)
-            + self.K_arf * stheta / (self.wf / 2)
-        )
-        Ft2 = (
-            F20
-            + Kt * (zc2 - z2)
-            + Ct * (vzc2 - vz2)
-            - self.K_arf * stheta / (self.wf / 2)
-        )
-        Ft3 = (
-            F30
-            + Kt * (zc3 - z3)
-            + Ct * (vzc3 - vz3)
-            + self.K_arr * stheta / (self.wf / 2)
-        )
-        Ft4 = (
-            F40
-            + Kt * (zc4 - z4)
-            + Ct * (vzc4 - vz4)
-            - self.K_arr * stheta / (self.wf / 2)
-        )
+        Ft1 = F10 + Kt * (zc1 - z1) + Ct * (vzc1 - vz1)
+        Ft2 = F20 + Kt * (zc2 - z2) + Ct * (vzc2 - vz2)
+        Ft3 = F30 + Kt * (zc3 - z3) + Ct * (vzc3 - vz3)
+        Ft4 = F40 + Kt * (zc4 - z4) + Ct * (vzc4 - vz4)
 
         # Calculate suspension forces
         Fs1 = (
             F10
-            + K_sf * (z1 - z - self.wf / 2 * sphi + self.lf * stheta)
-            + C_sf * (vz1 - vz - self.wf / 2 * sphidot + self.lf * sthetadot)
+            + self.K_sf * (z1 - z - self.wf / 2 * sphi + self.lf * stheta)
+            + self.C_sf
+            * (vz1 - vz - phi_dot * self.wf / 2 * cphi + theta_dot * self.lf * ctheta)
         )
         Fs2 = (
             F20
-            + K_sf * (z2 - z + self.wf / 2 * sphi + self.lf * stheta)
-            + C_sf * (vz2 - vz + self.wf / 2 * sphidot + self.lf * sthetadot)
+            + self.K_sf * (z2 - z + self.wf / 2 * sphi + self.lf * stheta)
+            + self.C_sf
+            * (vz2 - vz + phi_dot * self.wf / 2 * cphi + theta_dot * self.lf * ctheta)
         )
         Fs3 = (
             F30
-            + K_sr * (z3 - z - self.wr / 2 * sphi - self.lr * stheta)
-            + C_sr * (vz3 - vz - self.wr / 2 * sphidot - self.lr * sthetadot)
+            + self.K_sr * (z3 - z - self.wr / 2 * sphi - self.lr * stheta)
+            + self.C_sr
+            * (vz3 - vz - phi_dot * self.wr / 2 * cphi - theta_dot * self.lr * ctheta)
         )
         Fs4 = (
             F40
-            + K_sr * (z4 - z + self.wr / 2 * sphi - self.lr * stheta)
-            + C_sr * (vz4 - vz + self.wr / 2 * sphidot - self.lr * sthetadot)
+            + self.K_sr * (z4 - z + self.wr / 2 * sphi - self.lr * stheta)
+            + self.C_sr
+            * (vz4 - vz + phi_dot * self.wr / 2 * cphi - theta_dot * self.lr * ctheta)
         )
-        return Ft1, Ft2, Ft3, Ft4, Fs1, Fs2, Fs3, Fs4
+
+        # Calculate anti-roll bar forces
+        Farf = self.K_arf * (z2 - z1)  # The force is positive in 1 and negative in 2
+        Farr = self.K_arr * (z4 - z3)  # The force is positive in 3 and negative in 4
+
+        return Ft1, Ft2, Ft3, Ft4, Fs1, Fs2, Fs3, Fs4, Farf, Farr
 
     def get_steer_wbw(self, delta_sw):
         # return the ackerman geometry wheel by wheel

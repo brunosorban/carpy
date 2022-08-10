@@ -127,31 +127,109 @@ class Driver:
         elif steering == "DLC":
             print("Double Lane-Change defined.")
 
-            def brute_DLC(t, angle=6):
+            ## Senos ajustados
+            # def brute_DLC(t, angle=6):
+            #     if t <= 30:
+            #         return 0
+            #     elif 30 < t <= 31.93:
+            #         return np.deg2rad(angle) * np.sin((t - 30) * 2 * np.pi / 2)
+            #     elif 31.93 < t < 33.4:
+            #         return 0
+            #     elif 33.4 < t <= 35.318:
+            #         return -np.deg2rad(angle) * np.sin((t - 33.4) * 2 * np.pi / 2)
+            #     else:
+            #         return 0
+                
+            ## Senos completos
+            # def brute_DLC(t, angle=6):
+            #     if t <= 30:
+            #         return 0
+            #     elif 30 < t < 32:
+            #         return np.deg2rad(angle) * np.sin((t - 30) * 2 * np.pi / 2)
+            #     elif 32 <= t <= 34:
+            #         return 0
+            #     elif 34 < t < 36:
+            #         return -np.deg2rad(angle) * np.sin((t - 34) * 2 * np.pi / 2)
+            #     else:
+            #         return 0
+            
+            # # Polinomio de 4 grau
+            # t1 = 0.5
+            # t2 = 1
+            # angle = np.deg2rad(6)
+            # A_pol = [[t1**4, t1**3, t1**2], [t2**4, t2**3, t2**2], [4*t1**3, 3*t1**2, 2*t1]]
+            # b_pol = [angle, 0, 0]
+            # a0, a1, a2 = np.linalg.solve(A_pol, b_pol)
+            # a3 = a4 = 0
+            # f = lambda x: a0*x**4 + a1*x**3 + a2*x**2 + a3*x + a4
+            # def dlc_func(t):
+            #     if t <= 30:
+            #         return 0
+            #     elif 30 < t <= 31:
+            #         return f(t-30)
+            #     elif 31 < t <= 32:
+            #         return -f(32 - t)
+            #     elif 32 < t <= 34:
+            #         return 0
+            #     elif 34 < t <= 35:
+            #         return -f(t-34)
+            #     elif 35 < t <= 36:
+            #         return f(36 - t)
+            #     else:
+            #         return 0
+            
+            # Polinomio do 8 grau
+            t0 = 0
+            t1 = 0.5
+            t2 = 1
+            t3 = 1.5
+            t4 = 2
+            alpha = np.deg2rad(6)
+
+            A_pol = [
+                [t0**8, t0**7, t0**6, t0**5, t0**4, t0**3, t0**2, t0, 1], 
+                [t1**8, t1**7, t1**6, t1**5, t1**4, t1**3, t1**2, t1, 1], 
+                [t2**8, t2**7, t2**6, t2**5, t2**4, t2**3, t2**2, t2, 1], 
+                [t3**8, t3**7, t3**6, t3**5, t3**4, t3**3, t3**2, t3, 1], 
+                [t4**8, t4**7, t4**6, t4**5, t4**4, t4**3, t4**2, t4, 1],
+                [8 * t0**7, 7 * t0**6, 6 * t0**5, 5 * t0**4, 4 * t0**3, 3 * t0**2, 2 * t0, 1, 0],
+                [8 * t1**7, 7 * t1**6, 6 * t1**5, 5 * t1**4, 4 * t1**3, 3 * t1**2, 2 * t1, 1, 0],
+                [8 * t3**7, 7 * t3**6, 6 * t3**5, 5 * t3**4, 4 * t3**3, 3 * t3**2, 2 * t3, 1, 0],
+                [8 * t4**7, 7 * t4**6, 6 * t4**5, 5 * t4**4, 4 * t4**3, 3 * t4**2, 2 * t4, 1, 0],]
+
+            b_pol = [0, alpha, 0, -alpha, 0, 0, 0, 0, 0]
+
+            a0, a1, a2, a3, a4, a5, a6, a7, a8 = np.linalg.solve(A_pol, b_pol)
+            f = lambda x: a0 * x**8 + a1 * x**7 + a2 * x**6 + a3 * x**5 + a4 * x**4 + a5 * x**3 + a6 * x**2 + a7 * x + a8
+            
+            def dlc_func(t):
                 if t <= 30:
                     return 0
-                elif 30 < t <= 31.93:
-                    return np.deg2rad(angle) * np.sin((t - 30) * 2 * np.pi / 2)
-                elif 31.93 < t < 33.4:
+                elif 30 < t <= 32:
+                    return f(t-30)
+                elif 32 < t <= 34:
                     return 0
-                elif 33.4 < t <= 35.318:
-                    return -np.deg2rad(angle) * np.sin((t - 33.4) * 2 * np.pi / 2)
+                elif 34 < t <= 36:
+                    return -f(t-34)
                 else:
                     return 0
 
-            t = np.linspace(0, 100, 10001)
-            y = [brute_DLC(ti) for ti in t]
-            self.DLC_func = Function(
-                t,
-                y,
-                method="cubicSpline",
-                xlabel="Time (s)",
-                ylabel="Steering angle (rad)",
-            )
+            self.DLC_func = dlc_func
+            
+            # # Senos
+            # t = np.linspace(0, 100, 10001)
+            # y = [brute_DLC(ti) for ti in t]
+            # self.DLC_func = Function(
+            #     t,
+            #     y,
+            #     method="linear",
+            #     xlabel="Time (s)",
+            #     ylabel="Steering angle (rad)",
+            # )
 
             self.delta_control = self.DLC
 
-            self.DLC_func.plot2D("Steering angle in time", lower=25, upper=40)
+            # self.DLC_func.plot2D("Steering angle in time", lower=25, upper=40)
 
         elif steering == "sinusoidal":
             print("sinusoidal defined.")

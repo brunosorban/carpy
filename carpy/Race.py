@@ -8,8 +8,9 @@ import numpy as np
 from Function import Function
 from scipy import integrate
 import matplotlib.pyplot as plt
-import sys, pygame # For the animation function
-import imageio # For the animation function
+import sys, pygame  # For the animation function
+import imageio  # For the animation function
+
 
 class Race:
     """
@@ -207,6 +208,7 @@ class Race:
             Steer angle in tire 4 Z axis. Tire 4 refers to the rear right 
             tire.
     """
+
     def __init__(
         self,
         Vehicle,
@@ -285,11 +287,27 @@ class Race:
 
         # Get track variables; A base rotation is applied to consider distance from CG to each wheel
         Ct = self.rotation_matrix(0, 0, psi)
-        [xc1, yc1, zc1] = np.transpose(Ct) @ [self.Vehicle.lf, self.Vehicle.wf, 0] + [x, y, 0]
-        [xc2, yc2, zc2] = np.transpose(Ct) @ [self.Vehicle.lf, -self.Vehicle.wf, 0] + [x, y, 0]
-        [xc3, yc3, zc3] = np.transpose(Ct) @ [-self.Vehicle.lr, self.Vehicle.wr, 0] + [x, y, 0]
-        [xc4, yc4, zc4] = np.transpose(Ct) @ [-self.Vehicle.lr, -self.Vehicle.wr, 0] + [x, y, 0]
-        
+        [xc1, yc1, zc1] = np.transpose(Ct) @ [self.Vehicle.lf, self.Vehicle.wf, 0] + [
+            x,
+            y,
+            0,
+        ]
+        [xc2, yc2, zc2] = np.transpose(Ct) @ [self.Vehicle.lf, -self.Vehicle.wf, 0] + [
+            x,
+            y,
+            0,
+        ]
+        [xc3, yc3, zc3] = np.transpose(Ct) @ [-self.Vehicle.lr, self.Vehicle.wr, 0] + [
+            x,
+            y,
+            0,
+        ]
+        [xc4, yc4, zc4] = np.transpose(Ct) @ [-self.Vehicle.lr, -self.Vehicle.wr, 0] + [
+            x,
+            y,
+            0,
+        ]
+
         zc1 = self.Track.get_track_height(xc1, yc1)
         zc2 = self.Track.get_track_height(xc2, yc2)
         zc3 = self.Track.get_track_height(xc3, yc3)
@@ -319,6 +337,8 @@ class Race:
             fs_2,
             fs_3,
             fs_4,
+            far_f,
+            far_r,
         ) = self.Vehicle.get_vertical_load(
             z,
             vvz,
@@ -343,7 +363,7 @@ class Race:
             vzc3,
             vzc4,
         )
-        
+
         if min(ftz_1, ftz_2, ftz_3, ftz_4, fs_1, fs_2, fs_3, fs_4) < 0:
             self.solver.status = "finished"
             return [
@@ -467,10 +487,10 @@ class Race:
         [ax, ay, az] = np.transpose(C) @ [avx, avy, avz]
 
         # Calculate tires vertical acceleration
-        az1 = (ftz_1 - fs_1) / self.Vehicle.Tire.mass
-        az2 = (ftz_2 - fs_2) / self.Vehicle.Tire.mass
-        az3 = (ftz_3 - fs_3) / self.Vehicle.Tire.mass
-        az4 = (ftz_4 - fs_4) / self.Vehicle.Tire.mass
+        az1 = (ftz_1 - fs_1 + far_f) / self.Vehicle.Tire.mass
+        az2 = (ftz_2 - fs_2 - far_f) / self.Vehicle.Tire.mass
+        az3 = (ftz_3 - fs_3 + far_r) / self.Vehicle.Tire.mass
+        az4 = (ftz_4 - fs_4 - far_r) / self.Vehicle.Tire.mass
 
         # phi angular acceleration
         tau_x = (
@@ -1381,7 +1401,7 @@ class Race:
         position_side = np.array([0, 128 + 52])
         position_front = np.array([0, 270])
         # last_position = position
-        timeCount = 50
+        timeCount = 0
         scale = 3
 
         # Iteration in time
