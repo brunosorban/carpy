@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = "Bruno Abdulklech Sorban"
-__copyright__ = "Copyright 20XX, Bruno Sorban"
+__copyright__ = "Copyright 2022, Bruno Sorban"
 __license__ = "MIT"
 
 import numpy as np
