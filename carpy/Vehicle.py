@@ -36,8 +36,8 @@ class Vehicle:
         self.Ixx = Ixx
         self.Iyy = Iyy
         self.Izz = Izz
-        # self.K_arf = 0
-        # self.K_arr = 0
+        self.K_arf = 0
+        self.K_arr = 0
         self.gamma1 = 0
         self.gamma2 = 0
         self.gamma3 = 0
@@ -59,10 +59,10 @@ class Vehicle:
         K_arz = G * (np.pi * d**4 / 32) / (b * a**2) if not K_arz else K_arz
 
         if position == 'f': 
-            self.K_arzf = K_arz
+            self.K_arf = K_arz
             print('Anti-roll Bar (front) = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
         elif position == 'r': 
-            self.K_arzr = K_arz
+            self.K_arr = K_arz
             print('Anti-roll Bar (rear)  = {:.1f} Nm/৹'.format(np.deg2rad(K_arz)))
         else: 
             return print('Please insert a valid position. Position must be "f" or "r"')
@@ -123,25 +123,25 @@ class Vehicle:
             F10
             + Kt * (zc1 - z1)
             + Ct * (vzc1 - vz1)
-            + self.K_arf * stheta / (self.wf / 2)
+            + self.K_arf * sphi / (self.wf / 2)
         )
         Ft2 = (
             F20
             + Kt * (zc2 - z2)
             + Ct * (vzc2 - vz2)
-            - self.K_arf * stheta / (self.wf / 2)
+            - self.K_arf * sphi / (self.wf / 2)
         )
         Ft3 = (
             F30
             + Kt * (zc3 - z3)
             + Ct * (vzc3 - vz3)
-            + self.K_arr * stheta / (self.wf / 2)
+            + self.K_arr * sphi / (self.wf / 2)
         )
         Ft4 = (
             F40
             + Kt * (zc4 - z4)
             + Ct * (vzc4 - vz4)
-            - self.K_arr * stheta / (self.wf / 2)
+            - self.K_arr * sphi / (self.wf / 2)
         )
 
         # Calculate suspension forces
@@ -169,7 +169,7 @@ class Vehicle:
 
     def get_steer_wbw(self, delta_sw):
         # return the ackerman geometry wheel by wheel
-        if delta_sw == 0:
+        if abs(delta_sw) < 1e-6:
             return 0, 0, 0, 0
         else:
             a = self.lf + self.lr

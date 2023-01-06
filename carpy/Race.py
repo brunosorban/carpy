@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = "Bruno Abdulklech Sorban"
-__copyright__ = "Copyright 20XX, Bruno Sorban"
+__copyright__ = "Copyright 2022, Bruno Sorban"
 __license__ = "MIT"
 
 import numpy as np
@@ -275,10 +275,8 @@ class Race:
             omega3,
             omega4,
         ) = sol
-
         # Mount rotation matrix
         C = self.rotation_matrix(phi, theta, psi)
-
         # Get velocities in vehicle coordinate system
         [vvx, vvy, vvz] = C @ [vx, vy, vz]
         g = C @ np.array([0, 0, -9.81])
@@ -1381,7 +1379,7 @@ class Race:
         position_side = np.array([0, 128 + 52])
         position_front = np.array([0, 270])
         # last_position = position
-        timeCount = 50
+        timeCount = 0
         scale = 3
 
         # Iteration in time
